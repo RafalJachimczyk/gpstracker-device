@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+message SpatialTelemetry {
+    required int32 deviceId = 1;
+    required int32 timestamp = 2;
+
+    required float latitude = 3;
+    required float longitude = 4;
+    required int32 gsmStrength = 5;
+}

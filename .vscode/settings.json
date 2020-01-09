@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/jachir01/.platformio/penv/bin:/Users/jachir01/.platformio/penv:/usr/local/opt/openssl/bin:/Users/jachir01/.nvm/versions/node/v10.13.0/bin:/usr/local/opt/curl/bin:/usr/local/opt/unzip/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Wireshark.app/Contents/MacOS",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}
