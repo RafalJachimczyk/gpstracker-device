@@ -1,5 +1,6 @@
 
 #include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h> 
 #include <ESP8266HTTPClient.h>
 
 #include <SoftwareSerial.h>
@@ -12,19 +13,12 @@
 #include <./SpatialTelemetry.pb.h>
 #include "./credentials.h"
 
-// SoftwareSerial SerialGPS(D7, D8); // RX, TX
 SoftwareSerial SerialGPS(D7, D8);
-
-WiFiClient client;
-// TinyGsm modem(Serial);
-// TinyGsmClient client(modem);
-
-const char telemetryServer[] = "0.tcp.ngrok.io";
-const int  telemetryPort = 18300;
 
 TinyGPSPlus gps;
 SimpleTimer timer;
 
+const char fingerprint[] PROGMEM = "2A 97 72 75 5B BF BD EB 41 E8 1D D0 59 81 F0 7A 57 98 75 88";
 
 int timerId;
 
@@ -48,15 +42,6 @@ void writeSpatialTelemetry() {
 
         SpatialTelemetry telemetry = SpatialTelemetry_init_zero;
         pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-
-
-        if (!client.connect(telemetryServer, telemetryPort)) {
-            
-            timer.setTimeout(2000L, []() {
-                Serial.println("connection to telemetry failed");
-            });
-            return;
-        }
 
         int32 deviceId = 1;
         int32 timestamp = 1573153482;
@@ -86,9 +71,41 @@ void writeSpatialTelemetry() {
             return;
         }
 
-        client.write(buffer, stream.bytes_written);
-        client.stop();
-        Serial.println("Written spatial telemetry...");
+        std::unique_ptr<BearSSL::WiFiClientSecure>client(new BearSSL::WiFiClientSecure);
+
+        client->setFingerprint(fingerprint);
+
+        HTTPClient https;
+
+        Serial.print("[HTTPS] begin...\n");
+        if (https.begin(*client, "https://us-central1-spatial-telemetry.cloudfunctions.net/spatial-telemetry-receive")) {  // HTTPS
+
+          Serial.print("[HTTPS] POST...\n");
+          // start connection and send HTTP header
+          int httpCode = https.POST(buffer, message_length);
+
+          // httpCode will be negative on error
+          if (httpCode > 0) {
+            // HTTP header has been send and Server response header has been handled
+            Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
+
+            // file found at server
+            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+              String payload = https.getString();
+              Serial.println(payload);
+            }
+          } else {
+            Serial.printf("[HTTPS] POST... failed, response code: %d, error: %s\n", httpCode,  https.errorToString(httpCode).c_str());
+          }
+
+          https.end();
+        } else {
+          Serial.printf("[HTTPS] Unable to connect\n");
+        }
+        
+        // client.write(buffer, stream.bytes_written);
+        // client.stop();
+        // Serial.println("Written spatial telemetry...");
 
 
     } else {
