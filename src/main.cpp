@@ -18,7 +18,8 @@ SoftwareSerial SerialGPS(D7, D8);
 TinyGPSPlus gps;
 SimpleTimer timer;
 
-const char fingerprint[] PROGMEM = "2A 97 72 75 5B BF BD EB 41 E8 1D D0 59 81 F0 7A 57 98 75 88";
+//const char fingerprint[] PROGMEM = "2A 97 72 75 5B BF BD EB 41 E8 1D D0 59 81 F0 7A 57 98 75 88";
+const char fingerprint[] PROGMEM = "1B B6 01 7A 5E 9C 3E B0 C9 89 9A 7C 46 5D EE 91 2F 38 86 D8";
 
 int timerId;
 
