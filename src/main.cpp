@@ -1,7 +1,4 @@
-
-#include <ESP8266WiFi.h>
-#include <WiFiClientSecure.h> 
-#include <ESP8266HTTPClient.h>
+#include "HttpsClient.h"
 
 #include <SoftwareSerial.h>
 #include <pb_common.h>
@@ -11,15 +8,28 @@
 #include <SimpleTimer.h>
 
 #include <./SpatialTelemetry.pb.h>
-#include "./credentials.h"
+
 
 SoftwareSerial SerialGPS(D7, D8);
-
 TinyGPSPlus gps;
 SimpleTimer timer;
 
-//const char fingerprint[] PROGMEM = "2A 97 72 75 5B BF BD EB 41 E8 1D D0 59 81 F0 7A 57 98 75 88";
-const char fingerprint[] PROGMEM = "1B B6 01 7A 5E 9C 3E B0 C9 89 9A 7C 46 5D EE 91 2F 38 86 D8";
+
+// Define the serial console for debug prints, if needed
+// #define TINY_GSM_DEBUG SerialMon
+
+// Set serial for debug console (to the Serial Monitor, default speed 115200)
+#define SerialMon Serial
+
+// Set serial for AT commands (to the module)
+#define SerialAT Serial
+
+String server = "us-central1-spatial-telemetry.cloudfunctions.net";
+const int  port = 443;
+const char resource[] = "/spatial-telemetry-receive";
+const char contentType[] = "binary/octet-stream";
+
+HttpsClient httpsClient(&server, port, &SerialMon, &SerialAT);
 
 int timerId;
 
@@ -34,7 +44,7 @@ void updateGPS() {
 
 void writeSpatialTelemetry() {
 
-    Serial.println("About to write spatial telemetry...");
+    SerialMon.println("About to write spatial telemetry...");
     if (gps.location.isValid()) {
 
         uint8_t buffer[128];
@@ -47,11 +57,11 @@ void writeSpatialTelemetry() {
         int32 deviceId = 1;
         int32 timestamp = 1573153482;
 
-        Serial.print("Lat: ");
-        Serial.println(gps.location.lat());
+        SerialMon.print("Lat: ");
+        SerialMon.println(gps.location.lat());
 
-        Serial.print("Lng: ");
-        Serial.println(gps.location.lng());
+        SerialMon.print("Lng: ");
+        SerialMon.println(gps.location.lng());
 
         float lat = gps.location.lat();
         float lon = gps.location.lng();
@@ -68,84 +78,61 @@ void writeSpatialTelemetry() {
         message_length = stream.bytes_written;
 
         if (!status) {
-            Serial.printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
+            SerialMon.printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
             return;
         }
 
-        std::unique_ptr<BearSSL::WiFiClientSecure>client(new BearSSL::WiFiClientSecure);
+        
 
-        client->setFingerprint(fingerprint);
+        SerialMon.print("[HTTPS] begin...\n");
 
-        HTTPClient https;
+        httpsClient.http->connectionKeepAlive();
 
-        Serial.print("[HTTPS] begin...\n");
-        if (https.begin(*client, "https://us-central1-spatial-telemetry.cloudfunctions.net/spatial-telemetry-receive")) {  // HTTPS
+        SerialMon.print("[HTTPS] POST...\n");
+        int err = httpsClient.http->post(resource, contentType, message_length, buffer);
 
-          Serial.print("[HTTPS] POST...\n");
-          // start connection and send HTTP header
-          int httpCode = https.POST(buffer, message_length);
+        if (err != 0) {
+          SerialMon.println(F("failed to connect"));
+          SerialMon.println(err);
+        } else {
+
+          int httpCode = httpsClient.http->responseStatusCode();
 
           // httpCode will be negative on error
           if (httpCode > 0) {
             // HTTP header has been send and Server response header has been handled
-            Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
+            SerialMon.printf("[HTTPS] POST... code: %d\n", httpCode);
 
             // file found at server
-            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-              String payload = https.getString();
-              Serial.println(payload);
+            if (httpCode == 200) {
+              String responseBody = httpsClient.http->responseBody();
+              SerialMon.println(responseBody);
             }
           } else {
-            Serial.printf("[HTTPS] POST... failed, response code: %d, error: %s\n", httpCode,  https.errorToString(httpCode).c_str());
+            SerialMon.printf("[HTTPS] POST... failed, response code: %d\n", httpCode);
           }
 
-          https.end();
-        } else {
-          Serial.printf("[HTTPS] Unable to connect\n");
+          httpsClient.http->stop();
         }
 
-
     } else {
-        Serial.println("Invalid GPS data");
+        SerialMon.println("Invalid GPS data");
     }
 
-
-
-}
-
-void setupWiFi()
-{
-  WiFi.mode(WIFI_STA); // added 300716
-  WiFi.begin(ssid, password);
-  Serial.println();
-  Serial.print("Connecting");
-    
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-   }
-
-  Serial.println();
-  
-  Serial.print("Connected, IP address: ");
-  Serial.println(WiFi.localIP());
 }
 
 void setup() {
 
     
     // Initialize serial and wait for port to open:
-    Serial.begin(9600);
-
+    SerialMon.begin(9600);
     // Initialize GPS serial
     SerialGPS.begin(9600);
 
-    setupWiFi();
+    httpsClient.ConnectNetwork(); 
+    delay(1000);
 
     timerId = timer.setInterval(10000L, writeSpatialTelemetry);
-
-    // timer.setInterval(1000L, myGPSEvent);
 }
 
 void loop() {
