@@ -103,10 +103,6 @@ void writeSpatialTelemetry() {
         } else {
           Serial.printf("[HTTPS] Unable to connect\n");
         }
-        
-        // client.write(buffer, stream.bytes_written);
-        // client.stop();
-        // Serial.println("Written spatial telemetry...");
 
 
     } else {
