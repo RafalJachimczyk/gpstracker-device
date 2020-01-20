@@ -3,7 +3,7 @@
 #include <SimpleTimer.h>
 
 #include "HttpsClient.h"
-#include "lib/writeSpatialTelemetry/writeSpatialTelemetry.h"
+#include "lib/telemetry/writeSpatialTelemetry.h"
 
 SoftwareSerial SerialGPS(D7, D8);
 TinyGPSPlus gps;

@@ -26,7 +26,7 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, TinyGPSPlus *gps, HardwareS
 
         float lat = gps->location.lat();
         float lon = gps->location.lng();
-        int32 gsmStrength = 25;
+        int32 gsmStrength = httpsClient->GetGsmStrength();
 
         telemetry.deviceId = deviceId;
         telemetry.timestamp = timestamp;
