@@ -109,3 +109,7 @@ void HttpsClient::Disconnect() {
       _SerialMon->println(F("GPRS disconnected"));
   #endif
 }
+
+int HttpsClient::GetGsmStrength() {
+  return _modem->getSignalQuality();
+}
