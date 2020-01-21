@@ -3,6 +3,10 @@
 const char resource[] = "/spatial-telemetry-receive";
 const char contentType[] = "binary/octet-stream";
 
+// Voltage monitoring
+unsigned int raw = 0;
+float voltage = 0.0;
+
 void writeSpatialTelemetry(HttpsClient *httpsClient, TinyGPSPlus *gps, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
 
     SerialMon->println("About to write spatial telemetry...");
@@ -26,13 +30,19 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, TinyGPSPlus *gps, HardwareS
 
         float lat = gps->location.lat();
         float lon = gps->location.lng();
-        int32 gsmStrength = httpsClient->GetGsmStrength();
+        int gsmStrength = httpsClient->GetGsmStrength();
+
+        pinMode(A0, INPUT);
+        raw = analogRead(A0);
+        voltage = raw / 1023.0;
+        voltage = voltage * 4.2;
 
         telemetry.deviceId = deviceId;
         telemetry.timestamp = timestamp;
         telemetry.latitude = lat;
         telemetry.longitude = lon;
         telemetry.gsmStrength = gsmStrength;
+        telemetry.voltage = voltage;
 
 
         status = pb_encode(&stream, SpatialTelemetry_fields, &telemetry);
