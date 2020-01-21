@@ -8,6 +8,7 @@ HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, Ha
 
   _client = new TinyGsmClientSecure(*_modem);
   
+  //TODO - this is probably disconnecting when no requests are made ?
   http = new HttpClient(*_client, *server, port); 
 }
 
@@ -18,21 +19,16 @@ void HttpsClient::ConnectNetwork() {
   // Set GSM module baud rate
   // TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
   _SerialAT->begin(9600);
-  delay(10);
-
-  // Restart takes quite some time
-  // To skip it, call init() instead of restart()
 
   uint32_t free = system_get_free_heap_size();
   _SerialMon->println("Hello World!");
   _SerialMon->printf("Free memory: %d", free);
 
   _SerialMon->println("Initializing modem...");
-  delay(10);
-  _modem->testAT();
-  
-  //_modem->init();
-  delay(100);
+  // Restart takes quite some time
+  // To skip it, call init() instead of restart()  
+  _modem->restart();
+
   String modemInfo = _modem->getModemInfo();
   _SerialMon->print("Modem Info: ");
   _SerialMon->println(modemInfo);
@@ -46,7 +42,7 @@ void HttpsClient::ConnectNetwork() {
 
   if (!_modem->hasSSL()) {
     _SerialMon->println(F("SSL is not supported by this modem"));
-    while(true) { delay(1000); }
+    return;
   }    
 
   #if TINY_GSM_USE_WIFI
@@ -111,5 +107,12 @@ void HttpsClient::Disconnect() {
 }
 
 int HttpsClient::GetGsmStrength() {
+
+  int strength = _modem->getSignalQuality();
+  _SerialMon->println();
+  _SerialMon->printf("################### _modem->getSignalQuality(): %d", _modem->getSignalQuality());
+  _SerialMon->println();
+  _SerialMon->printf("################### int Strength: %d", strength);
+  _SerialMon->println();
   return _modem->getSignalQuality();
 }
