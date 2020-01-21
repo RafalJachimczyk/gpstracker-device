@@ -43,14 +43,12 @@ void writeSpatialTelemetry() {
 }
 
 void setup() {
-
-    
     // Initialize serial and wait for port to open:
     SerialMon.begin(9600);
     // Initialize GPS serial
     SerialGPS.begin(9600);
 
-    timerId = timer.setInterval(450000L, writeSpatialTelemetry);
+    timerId = timer.setInterval(45000L, writeSpatialTelemetry);
 }
 
 void loop() {
