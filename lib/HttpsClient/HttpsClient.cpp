@@ -90,11 +90,6 @@ void HttpsClient::ConnectNetwork() {
   #endif
 }
 
-void HttpsClient::StopRequest() {
-  http->stop();
-  _SerialMon->println(F("Server disconnected"));
-}
-
 void HttpsClient::Disconnect() {
   #if TINY_GSM_USE_WIFI
     _modem.networkDisconnect();

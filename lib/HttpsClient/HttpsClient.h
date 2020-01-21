@@ -86,8 +86,6 @@ class HttpsClient {
 
         void ConnectNetwork();
 
-        void StopRequest();
-
         void Disconnect();
 
         int GetGsmStrength();
