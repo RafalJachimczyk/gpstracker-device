@@ -36,7 +36,10 @@ void updateGPS() {
 }
 
 void writeSpatialTelemetry() {
+  httpsClient.ConnectNetwork(); 
+  delay(1000);
   writeSpatialTelemetry(&httpsClient, &gps, &SerialMon, &SerialAT);
+  httpsClient.Disconnect();
 }
 
 void setup() {
@@ -47,10 +50,7 @@ void setup() {
     // Initialize GPS serial
     SerialGPS.begin(9600);
 
-    httpsClient.ConnectNetwork(); 
-    delay(1000);
-
-    timerId = timer.setInterval(10000L, writeSpatialTelemetry);
+    timerId = timer.setInterval(450000L, writeSpatialTelemetry);
 }
 
 void loop() {
