@@ -4,13 +4,12 @@ const char resource[] = "/spatial-telemetry-receive";
 const char contentType[] = "binary/octet-stream";
 
 // Voltage monitoring
-unsigned int raw = 0;
-float voltage = 0.0;
 
-void writeSpatialTelemetry(HttpsClient *httpsClient, TinyGPSPlus *gps, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
+
+void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
 
     // SerialMon->println("About to write spatial telemetry...");
-    if (gps->location.isValid()) {
+    // if (gps->location.isValid()) {
 
         uint8_t buffer[128];
         size_t message_length;
@@ -22,27 +21,25 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, TinyGPSPlus *gps, HardwareS
         int32 deviceId = 1;
         int32 timestamp = 1573153482;
 
-        // SerialMon->print("Lat: ");
-        // SerialMon->println(gps->location.lat());
 
-        // SerialMon->print("Lng: ");
-        // SerialMon->println(gps->location.lng());
 
-        // float lat = gps->location.lat();
-        // float lon = gps->location.lng();
-        int gsmStrength = httpsClient->GetGsmStrength();
+        float lat = fix->latitude();
+        float lng = fix->longitude();
 
-        pinMode(A0, INPUT);
-        raw = analogRead(A0);
-        voltage = raw / 1023.0;
-        voltage = voltage * 4.2;
+        SerialMon->print("Lat var: ");
+        SerialMon->printf("%.6f\n", lat);
+
+        SerialMon->print("Lng var: ");
+        SerialMon->printf("%.6f\n\n", lng);
+
+        // int gsmStrength = httpsClient->GetGsmStrength();
 
         telemetry.deviceId = deviceId;
         telemetry.timestamp = timestamp;
-        telemetry.latitude = gps->location.lat();
-        telemetry.longitude = gps->location.lng();
-        telemetry.gsmStrength = gsmStrength;
-        telemetry.voltage = voltage;
+        telemetry.latitude = lat;
+        telemetry.longitude = lng;
+        telemetry.gsmStrength = 5;
+        telemetry.voltage = 1;
 
 
         status = pb_encode(&stream, SpatialTelemetry_fields, &telemetry);
@@ -84,8 +81,8 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, TinyGPSPlus *gps, HardwareS
           httpsClient->http->stop();
         }
 
-    } else {
+    // } else {
         // SerialMon->println("Invalid GPS data");
-    }
+    // }
 
 }
