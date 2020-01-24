@@ -14,24 +14,24 @@ HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, Ha
 
 void HttpsClient::ConnectNetwork() {
 
-  _SerialMon->println("Wait...");
+  // _SerialMon->println("Wait...");
 
   // Set GSM module baud rate
   // TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
   _SerialAT->begin(9600);
 
-  uint32_t free = system_get_free_heap_size();
-  _SerialMon->println("Hello World!");
-  _SerialMon->printf("Free memory: %d", free);
+  //uint32_t free = system_get_free_heap_size();
+  // _SerialMon->println("Hello World!");
+  // _SerialMon->printf("Free memory: %d", free);
 
-  _SerialMon->println("Initializing modem...");
+  // _SerialMon->println("Initializing modem...");
   // Restart takes quite some time
   // To skip it, call init() instead of restart()  
   _modem->restart();
 
   String modemInfo = _modem->getModemInfo();
-  _SerialMon->print("Modem Info: ");
-  _SerialMon->println(modemInfo);
+  // _SerialMon->print("Modem Info: ");
+  // _SerialMon->println(modemInfo);
 
   #if TINY_GSM_USE_GPRS
     // Unlock your SIM card with a PIN if needed
@@ -41,7 +41,7 @@ void HttpsClient::ConnectNetwork() {
   #endif
 
   if (!_modem->hasSSL()) {
-    _SerialMon->println(F("SSL is not supported by this modem"));
+    // _SerialMon->println(F("SSL is not supported by this modem"));
     return;
   }    
 
@@ -50,7 +50,7 @@ void HttpsClient::ConnectNetwork() {
     _SerialMon.print(F("Setting SSID/password..."));
     if (!_modem->networkConnect(wifiSSID, wifiPass)) {
       _SerialMon.println(" fail");
-      delay(10000);
+      //delay(10000);
       return;
     }
     _SerialMon.println(" success");
@@ -61,31 +61,31 @@ void HttpsClient::ConnectNetwork() {
     _modem->gprsConnect(apn, gprsUser, gprsPass);
   #endif
 
-  _SerialMon->print("Waiting for network...");
+  // _SerialMon->print("Waiting for network...");
   if (!_modem->waitForNetwork()) {
-    _SerialMon->println(" fail");
-    delay(10000);
+    // _SerialMon->println(" fail");
+    // delay(10000);
     return;
   }
-  _SerialMon->println(" success");
+  // _SerialMon->println(" success");
 
   if (_modem->isNetworkConnected()) {
-    _SerialMon->println("Network connected");
+    // _SerialMon->println("Network connected");
   }
 
   #if TINY_GSM_USE_GPRS
     // GPRS connection parameters are usually set after network registration
-      _SerialMon->print(F("Connecting to "));
-      _SerialMon->print(apn);
+      // _SerialMon->print(F("Connecting to "));
+      // _SerialMon->print(apn);
       if (!_modem->gprsConnect(apn, gprsUser, gprsPass)) {
-        _SerialMon->println(" fail");
-        delay(10000);
+        // _SerialMon->println(" fail");
+        // delay(10000);
         return;
       }
-      _SerialMon->println(" success");
+      // _SerialMon->println(" success");
 
       if (_modem->isGprsConnected()) {
-        _SerialMon->println("GPRS connected");
+        // _SerialMon->println("GPRS connected");
       }
   #endif
 }
@@ -97,17 +97,17 @@ void HttpsClient::Disconnect() {
   #endif
   #if TINY_GSM_USE_GPRS
       _modem->gprsDisconnect();
-      _SerialMon->println(F("GPRS disconnected"));
+      // _SerialMon->println(F("GPRS disconnected"));
   #endif
 }
 
 int HttpsClient::GetGsmStrength() {
 
-  int strength = _modem->getSignalQuality();
-  _SerialMon->println();
-  _SerialMon->printf("################### _modem->getSignalQuality(): %d", _modem->getSignalQuality());
-  _SerialMon->println();
-  _SerialMon->printf("################### int Strength: %d", strength);
-  _SerialMon->println();
+  // int strength = _modem->getSignalQuality();
+  // _SerialMon->println();
+  // _SerialMon->printf("################### _modem->getSignalQuality(): %d", _modem->getSignalQuality());
+  // _SerialMon->println();
+  // _SerialMon->printf("################### int Strength: %d", strength);
+  // _SerialMon->println();
   return _modem->getSignalQuality();
 }
