@@ -1,3 +1,4 @@
+#include <ESP8266WiFi.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 #include <SimpleTimer.h>
@@ -37,12 +38,16 @@ void updateGPS() {
 
 void writeSpatialTelemetry() {
   httpsClient.ConnectNetwork(); 
-  delay(1000);
   writeSpatialTelemetry(&httpsClient, &gps, &SerialMon, &SerialAT);
   httpsClient.Disconnect();
 }
 
 void setup() {
+
+    WiFi.disconnect(); 
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+
     // Initialize serial and wait for port to open:
     SerialMon.begin(9600);
     // Initialize GPS serial
