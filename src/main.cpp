@@ -1,5 +1,3 @@
-#include <ESP8266WiFi.h>
-#include <SoftwareSerial.h>
 #include <SimpleTimer.h>
 
 #define RX_PIN 13
@@ -105,10 +103,6 @@ void writeSpatialTelemetryProxy(void* args) {
 }
 
 void setup() {
-
-    WiFi.disconnect(); 
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
 
 /////////////
 DEBUG_PORT.begin(9600);

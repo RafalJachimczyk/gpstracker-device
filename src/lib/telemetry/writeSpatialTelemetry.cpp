@@ -18,9 +18,8 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSeria
         SpatialTelemetry telemetry = SpatialTelemetry_init_zero;
         pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
-        int32 deviceId = 1;
-        int32 timestamp = 1573153482;
-
+        int deviceId = 1;
+        int timestamp = 1573153482;
 
 
         float lat = fix->latitude();
