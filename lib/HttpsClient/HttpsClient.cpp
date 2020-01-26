@@ -17,8 +17,8 @@ void HttpsClient::ConnectNetwork() {
   // _SerialMon->println("Wait...");
 
   // Set GSM module baud rate
-  TinyGsmAutoBaud(*_SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
-  //_SerialAT->begin(9600);
+  //TinyGsmAutoBaud(*_SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
+  _SerialAT->begin(9600);
 
   //uint32_t free = system_get_free_heap_size();
   // _SerialMon->println("Hello World!");
