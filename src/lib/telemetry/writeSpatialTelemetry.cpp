@@ -46,20 +46,20 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSeria
         message_length = stream.bytes_written;
 
         if (!status) {
-            // SerialMon->printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
+            SerialMon->printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
             return;
         }
 
-        // SerialMon->print("[HTTPS] begin...\n");
+        SerialMon->print("[HTTPS] begin...\n");
 
         httpsClient->http->connectionKeepAlive();
 
-        // SerialMon->print("[HTTPS] POST...\n");
+        SerialMon->print("[HTTPS] POST...\n");
         int err = httpsClient->http->post(resource, contentType, message_length, buffer);
 
         if (err != 0) {
-          // SerialMon->println(F("failed to connect"));
-          // SerialMon->println(err);
+          SerialMon->println(F("failed to connect"));
+          SerialMon->println(err);
         } else {
 
           int httpCode = httpsClient->http->responseStatusCode();
@@ -67,15 +67,15 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSeria
           // httpCode will be negative on error
           if (httpCode > 0) {
             // HTTP header has been send and Server response header has been handled
-            // SerialMon->printf("[HTTPS] POST... code: %d\n", httpCode);
+            SerialMon->printf("[HTTPS] POST... code: %d\n", httpCode);
 
             // file found at server
             if (httpCode == 200) {
               String responseBody = httpsClient->http->responseBody();
-              // SerialMon->println(responseBody);
+              SerialMon->println(responseBody);
             }
           } else {
-            // SerialMon->printf("[HTTPS] POST... failed, response code: %d\n", httpCode);
+            SerialMon->printf("[HTTPS] POST... failed, response code: %d\n", httpCode);
           }
 
           httpsClient->http->stop();

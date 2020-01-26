@@ -164,10 +164,10 @@ DEBUG_PORT.begin(9600);
 
     // Initialize serial and wait for port to open:
     SerialMon.begin(9600);
-    // Initialize GPS serial
 
-    timer.setInterval(1000L, writeSpatialTelemetryProxy, (void *)&position);
+    timer.setInterval(90000L, writeSpatialTelemetryProxy, (void *)&position);
     //timer.setInterval(1000L, printGPS, (void *)&position);
+
 }
 
 void loop() {
