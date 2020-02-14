@@ -55,24 +55,23 @@ static void GPSisr( uint8_t c )
 
 void writeSpatialTelemetryProxy(void* args) {
 
-        Position* locPos = (Position*)args;
+  Position* locPos = (Position*)args;
 
-        SerialMon.print("Lat var: ");
-        SerialMon.printf("%.6f\n", locPos->lat);
+  SerialMon.print("Lat var: ");
+  SerialMon.printf("%.6f\n", locPos->lat);
 
-        SerialMon.print("Lng var: ");
-        SerialMon.printf("%.6f\n\n", locPos->lng);
+  SerialMon.print("Lng var: ");
+  SerialMon.printf("%.6f\n\n", locPos->lng);
 
-        SerialMon.print("Lat: ");
-        SerialMon.printf("%.6f\n", gps.fix().latitude());
+  SerialMon.print("Lat: ");
+  SerialMon.printf("%.6f\n", gps.fix().latitude());
 
-        SerialMon.print("Lng: ");
-        SerialMon.printf("%.6f\n\n", gps.fix().longitude());
-
-
-  // httpsClient.ConnectNetwork(); 
+  SerialMon.print("Lng: ");
+  SerialMon.printf("%.6f\n\n", gps.fix().longitude());
+  
+  httpsClient.ConnectNetwork(); 
   writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT);
-  // httpsClient.Disconnect();
+  httpsClient.Disconnect();
 }
 
 void setup() {
@@ -97,15 +96,12 @@ DEBUG_PORT.begin(9600);
 //////////
     
 
-    // httpsClient.ConnectNetwork(); 
+  // Initialize serial and wait for port to open:
+  SerialMon.begin(9600);
 
-    // Initialize serial and wait for port to open:
-    SerialMon.begin(9600);
+  // httpsClient.ConnectNetwork();     
 
-  httpsClient.ConnectNetwork();     
-
-    timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
-    //timer.setInterval(1000L, printGPS, (void *)&position);
+  timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
 
 }
 
