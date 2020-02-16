@@ -18,7 +18,7 @@ bool HttpsClient::ConnectNetwork() {
 
   // Set GSM module baud rate
   //TinyGsmAutoBaud(*_SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
-  _SerialAT->begin(9600);
+  // _SerialAT->begin(9600);
 
   //uint32_t free = system_get_free_heap_size();
   // _SerialMon->println("Hello World!");
@@ -40,10 +40,10 @@ bool HttpsClient::ConnectNetwork() {
     }
   #endif
 
-  if (!_modem->hasSSL()) {
-    _SerialMon->println(F("###################: SSL is not supported by this modem"));
-    return false;
-  }    
+  // if (!_modem->hasSSL()) {
+  //   _SerialMon->println(F("###################: SSL is not supported by this modem"));
+  //   return false;
+  // }    
 
   #if TINY_GSM_USE_WIFI
     // Wifi connection parameters must be set before waiting for the network

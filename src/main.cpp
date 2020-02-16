@@ -103,7 +103,7 @@ DEBUG_PORT.begin(9600);
 
   // Initialize serial and wait for port to open:
   SerialMon.begin(9600);
-
+  Serial.begin(9600);
   // httpsClient.ConnectNetwork();     
 
   timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
