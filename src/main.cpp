@@ -68,10 +68,15 @@ void writeSpatialTelemetryProxy(void* args) {
 
   SerialMon.print("Lng: ");
   SerialMon.printf("%.6f\n\n", gps.fix().longitude());
-  
-  httpsClient.ConnectNetwork(); 
-  writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT);
-  httpsClient.Disconnect();
+
+  if(httpsClient.ConnectNetwork()) {
+    SerialMon.println("###################: ConnectNetwork succeeded");
+    writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT);
+    httpsClient.Disconnect();
+  } else {
+    SerialMon.println("###################: ConnectNetwork failed");
+  }
+
 }
 
 void setup() {

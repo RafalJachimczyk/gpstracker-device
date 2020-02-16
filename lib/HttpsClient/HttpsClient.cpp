@@ -12,7 +12,7 @@ HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, Ha
   http = new HttpClient(*_client, *server, port); 
 }
 
-void HttpsClient::ConnectNetwork() {
+bool HttpsClient::ConnectNetwork() {
 
   // _SerialMon->println("Wait...");
 
@@ -24,13 +24,13 @@ void HttpsClient::ConnectNetwork() {
   // _SerialMon->println("Hello World!");
   // _SerialMon->printf("Free memory: %d", free);
 
-  _SerialMon->println("Initializing modem...");
+  _SerialMon->println("###################: Initializing modem...");
   // Restart takes quite some time
   // To skip it, call init() instead of restart()  
   _modem->init();
 
   String modemInfo = _modem->getModemInfo();
-  _SerialMon->print("Modem Info: ");
+  _SerialMon->print("###################: Modem Info: ");
   _SerialMon->println(modemInfo);
 
   #if TINY_GSM_USE_GPRS
@@ -41,8 +41,8 @@ void HttpsClient::ConnectNetwork() {
   #endif
 
   if (!_modem->hasSSL()) {
-    _SerialMon->println(F("SSL is not supported by this modem"));
-    return;
+    _SerialMon->println(F("###################: SSL is not supported by this modem"));
+    return false;
   }    
 
   #if TINY_GSM_USE_WIFI
@@ -51,7 +51,7 @@ void HttpsClient::ConnectNetwork() {
     if (!_modem->networkConnect(wifiSSID, wifiPass)) {
       _SerialMon.println(" fail");
       //delay(10000);
-      return;
+      return false;
     }
     _SerialMon.println(" success");
   #endif
@@ -63,30 +63,32 @@ void HttpsClient::ConnectNetwork() {
 
   // _SerialMon->print("Waiting for network...");
   if (!_modem->waitForNetwork()) {
-    _SerialMon->println(" fail");
+    _SerialMon->println("###################:  fail");
     // delay(10000);
-    return;
+    return false;
   }
-  _SerialMon->println(" success");
+  _SerialMon->println("###################:  success");
 
   if (_modem->isNetworkConnected()) {
-    _SerialMon->println("Network connected");
+    _SerialMon->println("###################: Network connected");
   }
 
   #if TINY_GSM_USE_GPRS
     // GPRS connection parameters are usually set after network registration
-      _SerialMon->print(F("Connecting to "));
+      _SerialMon->print(F("###################: Connecting to "));
       _SerialMon->print(apn);
       if (!_modem->gprsConnect(apn, gprsUser, gprsPass)) {
-        _SerialMon->println(" fail");
+        _SerialMon->println("###################:  fail");
         // delay(10000);
-        return;
+        return false;
       }
-      _SerialMon->println(" success");
+      _SerialMon->println("###################:  success");
 
       if (_modem->isGprsConnected()) {
-        _SerialMon->println("GPRS connected");
+        _SerialMon->println("###################: GPRS connected");
       }
+
+      return true;
   #endif
 }
 
