@@ -27,7 +27,7 @@ void HttpsClient::ConnectNetwork() {
   _SerialMon->println("Initializing modem...");
   // Restart takes quite some time
   // To skip it, call init() instead of restart()  
-  _modem->restart();
+  _modem->init();
 
   String modemInfo = _modem->getModemInfo();
   _SerialMon->print("Modem Info: ");
