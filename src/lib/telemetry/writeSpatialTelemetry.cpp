@@ -31,13 +31,13 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSeria
         SerialMon->print("Lng var: ");
         SerialMon->printf("%.6f\n\n", lng);
 
-        // int gsmStrength = httpsClient->GetGsmStrength();
+        int gsmStrength = httpsClient->GetGsmStrength();
 
         telemetry.deviceId = deviceId;
         telemetry.timestamp = timestamp;
         telemetry.latitude = lat;
         telemetry.longitude = lng;
-        telemetry.gsmStrength = 5;
+        telemetry.gsmStrength = gsmStrength;
         telemetry.voltage = 1;
 
 
