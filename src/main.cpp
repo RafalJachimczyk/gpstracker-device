@@ -133,6 +133,7 @@ void writeSpatialTelemetryProxy(void* args) {
 
     if(writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT)) {
       SerialMon.println("###################: POST succeeded");
+      // Clears the watchdog timer
       watchdogClear();
     } else {
       SerialMon.println("###################: POST failed");
@@ -151,34 +152,21 @@ void writeSpatialTelemetryProxy(void* args) {
 }
 
 void setup() {
-//clears the watchdog reset registry flag to prevent reboot loop
-//has to be called immediately
-MCUSR = 0x00; //cleared for next reset detection
-wdt_disable();
 
-/////////////
-DEBUG_PORT.begin(9600);
-  while (!DEBUG_PORT)
-    ;
+  // Clears the watchdog reset registry flag to prevent reboot loop
+  // has to be called immediately
+  MCUSR = 0x00; //cleared for next reset detection
+  wdt_disable();
 
-  DEBUG_PORT.print( F("NMEA_isr.INO: started\n") );
-  DEBUG_PORT.print( F("fix object size = ") );
-  DEBUG_PORT.println( sizeof(gps.fix()) );
-  DEBUG_PORT.print( F("NMEAGPS object size = ") );
-  DEBUG_PORT.println( sizeof(gps) );
-  DEBUG_PORT.println( F("Looking for GPS device on " GPS_PORT_NAME) );
-
-  trace_header( DEBUG_PORT );
-  DEBUG_PORT.flush();
-
+  // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
   gpsPort.begin( 9600 );
-//////////
-    
-
+   
   // Initialize serial and wait for port to open:
   SerialMon.begin(9600);
   Serial.begin(9600);
+
+  // Used to connect in the setup
   // httpsClient.ConnectNetwork();     
 
   SerialMon.println("###################: Atmega644 started!");
