@@ -89,6 +89,8 @@ class HttpsClient {
 
         int GetGsmStrength();
 
+        bool modemRestart();
+
         HttpClient* http;
 };
 

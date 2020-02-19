@@ -75,6 +75,11 @@ void writeSpatialTelemetryProxy(void* args) {
     httpsClient.Disconnect();
   } else {
     SerialMon.println("###################: ConnectNetwork failed");
+    if(httpsClient.modemRestart()) {
+      SerialMon.println("###################: Modem restarted!");
+    } else {
+      SerialMon.println("###################: Failed restarting modem!");
+    }
   }
 
 }

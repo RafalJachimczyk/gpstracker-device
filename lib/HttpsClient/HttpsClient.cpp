@@ -12,6 +12,11 @@ HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, Ha
   http = new HttpClient(*_client, *server, port); 
 }
 
+
+bool HttpsClient::modemRestart() {
+  return _modem->restart();
+}
+
 bool HttpsClient::ConnectNetwork() {
 
   // _SerialMon->println("Wait...");
@@ -113,3 +118,5 @@ int HttpsClient::GetGsmStrength() {
   _SerialMon->println();
   return _modem->getSignalQuality();
 }
+
+
