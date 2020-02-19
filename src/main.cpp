@@ -1,4 +1,5 @@
 #include <SimpleTimer.h>
+#include <avr/wdt.h>
 
 #include <NMEAGPS.h>
 #include <GPSport.h>
@@ -23,7 +24,6 @@ SimpleTimer timer;
 
 // Set serial for debug console (to the Serial Monitor, default speed 115200)
 #define SerialMon Serial
-
 // Set serial for AT commands (to the module)
 #define SerialAT Serial
 
@@ -42,16 +42,75 @@ float voltage = 0.0;
 
 Position position {0,0};
 
-//--------------------------
+volatile int counter;      // Count number of times ISR is called.
+volatile int countmax = 3; // Arbitrarily selected 3 for this example.
+                          // Timer expires after about 24 secs if
+                          // 8 sec interval is selected below.
+
+
+void watchdogClear() {
+  counter = 0;
+  wdt_reset();
+}
+
+void watchdogEnable()
+{
+ counter=0;
+ cli();                              // disable interrupts
+
+ MCUSR = 0;                          // reset status register flags
+
+                                     // Put timer in interrupt-only mode:                                        
+ WDTCSR |= 0b00011000;               // Set WDCE (5th from left) and WDE (4th from left) to enter config mode,
+                                     // using bitwise OR assignment (leaves other bits unchanged).
+ WDTCSR =  0b01000000 | 0b100001;    // set WDIE (interrupt enable...7th from left, on left side of bar)
+                                     // clr WDE (reset enable...4th from left)
+                                     // and set delay interval (right side of bar) to 8 seconds,
+                                     // using bitwise OR operator.
+
+ sei();                              // re-enable interrupts
+ //wdt_reset();                      // this is not needed...timer starts without it
+
+ // delay interval patterns:
+ //  16 ms:     0b000000
+ //  500 ms:    0b000101
+ //  1 second:  0b000110
+ //  2 seconds: 0b000111
+ //  4 seconds: 0b100000
+ //  8 seconds: 0b100001
+
+}
+
+ISR(WDT_vect) // watchdog timer interrupt service routine
+{
+ counter+=1;
+
+ if (counter < countmax)
+ {
+   wdt_reset(); // start timer again (still in interrupt-only mode)
+ }
+ else             // then change timer to reset-only mode with short (16 ms) fuse
+ {
+   
+   MCUSR = 0;                          // reset flags
+
+                                       // Put timer in reset-only mode:
+   WDTCSR |= 0b00011000;               // Enter config mode.
+   WDTCSR =  0b00001000 | 0b000000;    // clr WDIE (interrupt enable...7th from left)
+                                       // set WDE (reset enable...4th from left), and set delay interval
+                                       // reset system in 16 ms...
+                                       // unless wdt_disable() in loop() is reached first
+
+   //wdt_reset(); // not needed
+ }
+}
+
 
 static void GPSisr( uint8_t c )
 {
   gps.handle( c );
 
 } // GPSisr
-
-//--------------------------
-
 
 void writeSpatialTelemetryProxy(void* args) {
 
@@ -74,6 +133,7 @@ void writeSpatialTelemetryProxy(void* args) {
 
     if(writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT)) {
       SerialMon.println("###################: POST succeeded");
+      watchdogClear();
     } else {
       SerialMon.println("###################: POST failed");
     }
@@ -91,6 +151,10 @@ void writeSpatialTelemetryProxy(void* args) {
 }
 
 void setup() {
+//clears the watchdog reset registry flag to prevent reboot loop
+//has to be called immediately
+MCUSR = 0x00; //cleared for next reset detection
+wdt_disable();
 
 /////////////
 DEBUG_PORT.begin(9600);
@@ -117,10 +181,13 @@ DEBUG_PORT.begin(9600);
   Serial.begin(9600);
   // httpsClient.ConnectNetwork();     
 
+  SerialMon.println("###################: Atmega644 started!");
+
   timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
 
 }
 
 void loop() {
     timer.run(); // Initiates BlynkTimer
+    watchdogEnable(); // set up watchdog timer in interrupt-only mode
 }
