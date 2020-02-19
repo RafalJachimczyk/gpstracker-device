@@ -6,7 +6,7 @@ const char contentType[] = "binary/octet-stream";
 // Voltage monitoring
 
 
-void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
+bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
 
     // SerialMon->println("About to write spatial telemetry...");
     // if (gps->location.isValid()) {
@@ -46,7 +46,7 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSeria
 
         if (!status) {
             SerialMon->printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
-            return;
+            return false;
         }
 
         SerialMon->print("[HTTPS] begin...\n");
@@ -55,29 +55,37 @@ void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSeria
 
         SerialMon->print("[HTTPS] POST...\n");
         int err = httpsClient->http->post(resource, contentType, message_length, buffer);
+        SerialMon->printf("[HTTPS] POST message_length: %d\n", message_length);
 
         if (err != 0) {
-          SerialMon->println(F("failed to connect"));
-          SerialMon->println(err);
+          
+            SerialMon->println(F("failed to connect"));
+            SerialMon->println(err);
+            return false;
+
         } else {
 
-          int httpCode = httpsClient->http->responseStatusCode();
+            int httpCode = httpsClient->http->responseStatusCode();
 
-          // httpCode will be negative on error
-          if (httpCode > 0) {
-            // HTTP header has been send and Server response header has been handled
-            SerialMon->printf("[HTTPS] POST... code: %d\n", httpCode);
+            // httpCode will be negative on error
+            if (httpCode > 0) {
+                // HTTP header has been send and Server response header has been handled
+                SerialMon->printf("[HTTPS] POST... code: %d\n", httpCode);
 
-            // file found at server
-            if (httpCode == 200) {
-              String responseBody = httpsClient->http->responseBody();
-              SerialMon->println(responseBody);
+                String responseBody = httpsClient->http->responseBody();
+                SerialMon->printf("[HTTPS] POST... response body: %s\n", responseBody);
+                httpsClient->http->stop();
+
+                if (httpCode == 200) {
+                  return true;
+                }
+
+            } else {
+                SerialMon->printf("[HTTPS] POST... failed, response code: %d\n", httpCode);
+                httpsClient->http->stop();   
             }
-          } else {
-            SerialMon->printf("[HTTPS] POST... failed, response code: %d\n", httpCode);
-          }
 
-          httpsClient->http->stop();
+            return false;
         }
 
     // } else {

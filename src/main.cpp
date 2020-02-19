@@ -71,7 +71,13 @@ void writeSpatialTelemetryProxy(void* args) {
 
   if(httpsClient.ConnectNetwork()) {
     SerialMon.println("###################: ConnectNetwork succeeded");
-    writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT);
+
+    if(writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT)) {
+      SerialMon.println("###################: POST succeeded");
+    } else {
+      SerialMon.println("###################: POST failed");
+    }
+
     httpsClient.Disconnect();
   } else {
     SerialMon.println("###################: ConnectNetwork failed");

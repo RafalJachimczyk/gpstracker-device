@@ -13,4 +13,4 @@ struct Position
   float voltage;
 };
 
-void writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT);
+bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT);
