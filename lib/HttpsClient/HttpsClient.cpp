@@ -90,7 +90,10 @@ bool HttpsClient::ConnectNetwork() {
       _SerialMon->println("###################:  success");
 
       if (_modem->isGprsConnected()) {
-        _SerialMon->println("###################: GPRS connected");
+        _SerialMon->print("###################: GPRS connected at: ");
+
+        String loc = _modem->getGsmLocation();
+        _SerialMon->println(loc);
       }
 
       return true;
