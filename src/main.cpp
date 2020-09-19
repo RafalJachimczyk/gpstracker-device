@@ -1,6 +1,8 @@
 #include <SimpleTimer.h>
 #include <avr/wdt.h>
 
+#include <Wire.h>
+#include <Maxim_DS2782.h>
 #include <NMEAGPS.h>
 #include <GPSport.h>
 #include <Streamers.h>
@@ -18,6 +20,9 @@ static NMEAGPS  gps;
 
 SimpleTimer timer;
 
+static const uint8_t i2c_address = 0x34;
+static const float rsns_ohm = 0.1;
+Maxim_DS2782 ds2782(&Wire, i2c_address, rsns_ohm, &SerialMon);
 
 // Define the serial console for debug prints, if needed
 // #define TINY_GSM_DEBUG SerialMon
@@ -124,6 +129,8 @@ void writeSpatialTelemetryProxy(void* args) {
 
   SerialMon.print("Lat: ");
   SerialMon.printf("%.6f\n", gps.fix().latitude());
+  voltage = ds2782.readVoltage();
+  current = ds2782.readCurrent();
 
   SerialMon.print("Lng: ");
   SerialMon.printf("%.6f\n\n", gps.fix().longitude());
