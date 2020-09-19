@@ -2,10 +2,16 @@
 #include <avr/wdt.h>
 #include <Wire.h>
 #include <Maxim_DS2782.h>
+
+#define NMEAGPS_INTERRUPT_PROCESSING
+
 #include <NMEAGPS.h>
 #include <GPSport.h>
 // #include <Streamers.h>
 #include <SoftwareSerial.h>
+
+
+
 
 // Check configuration
 
