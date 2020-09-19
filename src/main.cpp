@@ -119,6 +119,16 @@ static void GPSisr( uint8_t c )
 
 } // GPSisr
 
+bool modemRestart() {
+    if(httpsClient.modemRestart()) {
+      SerialMon.println("###################: Modem restarted!");
+      return true;
+    } else {
+      SerialMon.println("###################: Failed restarting modem!");
+      return false;
+    }
+}
+
 void writeSpatialTelemetryProxy(void* args) {
 
   Position* locPos = (Position*)args;
@@ -151,11 +161,7 @@ void writeSpatialTelemetryProxy(void* args) {
     httpsClient.Disconnect();
   } else {
     SerialMon.println("###################: ConnectNetwork failed");
-    if(httpsClient.modemRestart()) {
-      SerialMon.println("###################: Modem restarted!");
-    } else {
-      SerialMon.println("###################: Failed restarting modem!");
-    }
+    modemRestart();
   }
 
 }
@@ -180,6 +186,7 @@ void setup() {
 
   SerialMon.println("###################: Atmega644 started!");
 
+  modemRestart();
   timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
 
 }
