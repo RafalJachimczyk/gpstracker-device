@@ -131,21 +131,23 @@ bool modemRestart() {
 
 void writeSpatialTelemetryProxy(void* args) {
 
-  Position* locPos = (Position*)args;
+  // Position* locPos = (Position*)args;
 
-  SerialMon.print("Lat var: ");
-  SerialMon.printf("%.6f\n", locPos->lat);
+  // SerialMon.print("Lat var: ");
+  // SerialMon.printf("%.6f\n", locPos->lat);
 
-  SerialMon.print("Lng var: ");
-  SerialMon.printf("%.6f\n\n", locPos->lng);
+  // SerialMon.print("Lng var: ");
+  // SerialMon.printf("%.6f\n\n", locPos->lng);
 
-  SerialMon.print("Lat: ");
-  SerialMon.printf("%.6f\n", gps.fix().latitude());
+  // SerialMon.print("Lat: ");
+  // SerialMon.printf("%.6f\n", gps.fix().latitude());
+
+  // SerialMon.print("Lng: ");
+  // SerialMon.printf("%.6f\n\n", gps.fix().longitude());
+
   voltage = ds2782.readVoltage();
   current = ds2782.readCurrent();
 
-  SerialMon.print("Lng: ");
-  SerialMon.printf("%.6f\n\n", gps.fix().longitude());
 
   if(httpsClient.ConnectNetwork()) {
     SerialMon.println("###################: ConnectNetwork succeeded");
