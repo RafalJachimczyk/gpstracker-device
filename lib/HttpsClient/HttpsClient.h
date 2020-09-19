@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <SoftwareSerial.h>
 
 #ifndef __HTTPSCLIENT_H
 #define __HTTPSCLIENT_H
@@ -41,11 +42,14 @@ const char gprsUser[] = "";
 const char gprsPass[] = "";
 
 // Your WiFi connection credentials, if applicable
-const char wifiSSID[]  = "YourSSID";
-const char wifiPass[] = "YourWiFiPass";
+// const char wifiSSID[]  = "YourSSID";
+// const char wifiPass[] = "YourWiFiPass";
 
 // Server details
-
+#define SerialMon Serial
+// Define the serial console for debug prints, if needed
+// #define DUMP_AT_COMMANDS
+// #define TINY_GSM_DEBUG SerialMon
 
 #include <TinyGsmClient.h>
 #include <ArduinoHttpClient.h>
@@ -71,7 +75,7 @@ const char wifiPass[] = "YourWiFiPass";
 class HttpsClient {
     private:
         HardwareSerial *_SerialMon;
-        HardwareSerial *_SerialAT;
+        SoftwareSerial *_SerialAT;
 
         TinyGsm* _modem;
         TinyGsmClientSecure* _client;
@@ -81,7 +85,7 @@ class HttpsClient {
         String *server;
 
     public:
-        HttpsClient(String* server, int port, HardwareSerial *SerialMon, HardwareSerial *SerialAT);
+        HttpsClient(String* server, int port, HardwareSerial *SerialMon, SoftwareSerial *SerialAT);
 
         bool ConnectNetwork();
 

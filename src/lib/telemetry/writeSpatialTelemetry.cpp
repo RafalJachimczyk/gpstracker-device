@@ -6,7 +6,7 @@ const char contentType[] = "binary/octet-stream";
 // Voltage monitoring
 
 
-bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
+bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current, float voltage, HardwareSerial *SerialMon, SoftwareSerial *SerialAT) {
 
     // SerialMon->println("About to write spatial telemetry...");
     // if (gps->location.isValid()) {

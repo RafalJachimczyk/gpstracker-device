@@ -1,6 +1,6 @@
 #include "HttpsClient.h"
 
-HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, HardwareSerial *SerialAT) {
+HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, SoftwareSerial *SerialAT) {
   _SerialMon = SerialMon;
   _SerialAT = SerialAT;
 

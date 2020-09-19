@@ -6,6 +6,7 @@
 #include <NMEAGPS.h>
 #include <GPSport.h>
 #include <Streamers.h>
+#include <SoftwareSerial.h>
 
 // Check configuration
 
@@ -30,7 +31,7 @@ Maxim_DS2782 ds2782(&Wire, i2c_address, rsns_ohm, &SerialMon);
 // Set serial for debug console (to the Serial Monitor, default speed 115200)
 #define SerialMon Serial
 // Set serial for AT commands (to the module)
-#define SerialAT Serial
+SoftwareSerial SerialAT(23, 22);
 
 String server = "us-central1-spatial-telemetry.cloudfunctions.net";
 const int  port = 443;
@@ -44,6 +45,7 @@ unsigned int raw = 0;
 float lat = 0;
 float lng = 0;
 float voltage = 0.0;
+float current = 0.0;
 
 Position position {0,0};
 
@@ -138,7 +140,7 @@ void writeSpatialTelemetryProxy(void* args) {
   if(httpsClient.ConnectNetwork()) {
     SerialMon.println("###################: ConnectNetwork succeeded");
 
-    if(writeSpatialTelemetry(&httpsClient, &gps.fix(), &SerialMon, &SerialAT)) {
+    if(writeSpatialTelemetry(&httpsClient, &gps.fix(), current, voltage, &SerialMon, &SerialAT)) {
       SerialMon.println("###################: POST succeeded");
       // Clears the watchdog timer
       watchdogClear();

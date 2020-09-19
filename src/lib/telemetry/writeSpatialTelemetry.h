@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <SoftwareSerial.h>
 #include <NMEAGPS.h>
 #include <pb_common.h>
 #include <pb_encode.h>
@@ -13,4 +14,4 @@ struct Position
   float voltage;
 };
 
-bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, HardwareSerial *SerialMon, HardwareSerial *SerialAT);
+bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current, float voltage, HardwareSerial *SerialMon, SoftwareSerial *SerialAT);
