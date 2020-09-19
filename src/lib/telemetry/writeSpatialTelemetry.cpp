@@ -59,21 +59,20 @@ bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current
 
         if (err != 0) {
           
-            SerialMon->println(F("failed to connect"));
+            SerialMon->println(F("[HTTPS] POST - failed to connect"));
             SerialMon->println(err);
             return false;
 
         } else {
-
+            SerialMon->println("[HTTPS] POST - connected, reading response ...");
             int httpCode = httpsClient->http->responseStatusCode();
-
+            int responseSize = httpsClient->http->contentLength();
+            SerialMon->printf("[HTTPS] POST - code: %d\n", httpCode);
             // httpCode will be negative on error
             if (httpCode > 0) {
                 // HTTP header has been send and Server response header has been handled
-                SerialMon->printf("[HTTPS] POST... code: %d\n", httpCode);
-
-                String responseBody = httpsClient->http->responseBody();
-                SerialMon->printf("[HTTPS] POST... response body: %s\n", responseBody);
+                // String responseBody = httpsClient->http->responseBody();
+                // SerialMon->printf("[HTTPS] POST - response body: %s\n", responseBody);
                 httpsClient->http->stop();
 
                 if (httpCode == 200) {
@@ -81,7 +80,7 @@ bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current
                 }
 
             } else {
-                SerialMon->printf("[HTTPS] POST... failed, response code: %d\n", httpCode);
+                SerialMon->printf("[HTTPS] POST - failed, response code: %d\n", httpCode);
                 httpsClient->http->stop();   
             }
 
