@@ -202,8 +202,8 @@ void setup() {
   gpsPort.begin( 9600 );
    
   // Initialize serial and wait for port to open:
-  SerialMon.begin(9600);
-  Serial.begin(9600);
+  SerialMon.begin(19200);
+  SerialAT.begin(4800);
 
   // Used to connect in the setup
   // httpsClient.ConnectNetwork();     
