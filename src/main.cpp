@@ -1,11 +1,10 @@
 #include <SimpleTimer.h>
 #include <avr/wdt.h>
-
 #include <Wire.h>
 #include <Maxim_DS2782.h>
 #include <NMEAGPS.h>
 #include <GPSport.h>
-#include <Streamers.h>
+// #include <Streamers.h>
 #include <SoftwareSerial.h>
 
 // Check configuration
