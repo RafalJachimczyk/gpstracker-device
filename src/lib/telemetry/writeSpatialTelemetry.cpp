@@ -25,11 +25,11 @@ bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current
         float lat = fix->latitude();
         float lng = fix->longitude();
 
-        SerialMon->print("Lat var: ");
-        SerialMon->printf("%.6f\n", lat);
+        // SerialMon->print("Lat var: ");
+        // SerialMon->printf("%.6f\n", lat);
 
-        SerialMon->print("Lng var: ");
-        SerialMon->printf("%.6f\n\n", lng);
+        // SerialMon->print("Lng var: ");
+        // SerialMon->printf("%.6f\n\n", lng);
 
         int gsmStrength = httpsClient->GetGsmStrength();
 
@@ -38,7 +38,7 @@ bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current
         telemetry.latitude = lat;
         telemetry.longitude = lng;
         telemetry.gsmStrength = gsmStrength;
-        telemetry.voltage = 1;
+        telemetry.voltage = voltage;
 
 
         status = pb_encode(&stream, SpatialTelemetry_fields, &telemetry);

@@ -174,6 +174,29 @@ void setup() {
   MCUSR = 0x00; //cleared for next reset detection
   wdt_disable();
 
+
+ //Disable JTAG
+  MCUCR = (1<<JTD);
+  MCUCR = (1<<JTD);
+
+  // initialize digital pin LED_BUILTIN as an output.
+  //pinMode(PB4, OUTPUT);
+  pinMode(20, OUTPUT);
+  // enable Modem
+  digitalWrite(20, HIGH);
+  delay(1000);
+  digitalWrite(20, LOW);
+  delay(1000);  
+
+  // pinMode(21, OUTPUT);
+  // // enable GPS
+  // digitalWrite(21, HIGH);
+  // delay(1000);
+  // // digitalWrite(20, LOW);
+  // // delay(1000);  
+
+
+
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
   gpsPort.begin( 9600 );
@@ -186,7 +209,6 @@ void setup() {
   // httpsClient.ConnectNetwork();     
 
   SerialMon.println("###################: Atmega644 started!");
-
   modemRestart();
   timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
 
