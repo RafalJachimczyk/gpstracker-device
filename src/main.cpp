@@ -208,7 +208,7 @@ void setup() {
   gpsPort.begin( 9600 );
    
   // Initialize serial and wait for port to open:
-  SerialMon.begin(19200);
+  SerialMon.begin(57600);
   SerialAT.begin(4800);
 
   // Used to connect in the setup
