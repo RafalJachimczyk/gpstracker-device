@@ -216,7 +216,7 @@ void setup() {
 
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
-  timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
+  timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
 
 }
 
