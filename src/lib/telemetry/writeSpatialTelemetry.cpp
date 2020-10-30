@@ -39,6 +39,7 @@ bool writeSpatialTelemetry(HttpsClient *httpsClient, gps_fix *fix, float current
         telemetry.longitude = lng;
         telemetry.gsmStrength = gsmStrength;
         telemetry.voltage = voltage;
+        telemetry.current = current;
 
 
         status = pb_encode(&stream, SpatialTelemetry_fields, &telemetry);
