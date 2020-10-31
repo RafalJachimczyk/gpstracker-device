@@ -23,6 +23,7 @@
 #include "lib/telemetry/writeSpatialTelemetry.h"
 
 static NMEAGPS  gps;
+gps_fix gpsFix;
 
 SimpleTimer timer;
 
@@ -157,7 +158,7 @@ void writeSpatialTelemetryProxy(void* args) {
   if(httpsClient.ConnectNetwork()) {
     SerialMon.println("###################: ConnectNetwork succeeded");
 
-    if(writeSpatialTelemetry(&httpsClient, &gps.fix(), current, voltage, &SerialMon, &SerialAT)) {
+    if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
       SerialMon.println("###################: POST succeeded");
       // Clears the watchdog timer
       watchdogClear();
@@ -171,6 +172,21 @@ void writeSpatialTelemetryProxy(void* args) {
     modemRestart();
   }
 
+}
+
+void checkGpsStatus() {
+
+    // SerialMon.print( my_fix.latitude() );
+    // SerialMon.print( ',' );
+    // SerialMon.println( my_fix.longitude() );
+
+    if(gpsFix.valid.location) {
+      // SerialMon.println("Valid!");
+      digitalWrite(PB4, HIGH);
+    } else {
+      // SerialMon.println("Invalid!");
+      digitalWrite(PB4, LOW);
+    }  
 }
 
 void setup() {
@@ -202,6 +218,9 @@ void setup() {
   // // delay(1000);  
 
 
+  // PB4 LED
+  pinMode(PB4, OUTPUT);
+
 
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
@@ -214,10 +233,17 @@ void setup() {
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
   timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
-
+  timer.setInterval(1000L, checkGpsStatus);
 }
 
 void loop() {
     timer.run(); // Initiates BlynkTimer
     watchdogEnable(); // set up watchdog timer in interrupt-only mode
+    if(gps.available()) {
+      if(gps.fix().valid.location) {
+        gpsFix = gps.read();
+      }
+    }
+
+
 }
