@@ -205,14 +205,11 @@ void setup() {
 
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
-  gpsPort.begin( 9600 );
+  gpsPort.begin(9600);
    
   // Initialize serial and wait for port to open:
-  SerialMon.begin(57600);
-  SerialAT.begin(4800);
-
-  // Used to connect in the setup
-  // httpsClient.ConnectNetwork();     
+  SerialMon.begin(9600);
+  SerialAT.begin(2400);
 
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
