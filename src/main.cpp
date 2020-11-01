@@ -174,11 +174,15 @@ void writeSpatialTelemetryProxy(void* args) {
 
 }
 
-void checkGpsStatus() {
+void updateGpsStatus() {
 
-    // SerialMon.print( my_fix.latitude() );
-    // SerialMon.print( ',' );
-    // SerialMon.println( my_fix.longitude() );
+    SerialMon.print("Lat: ");
+    SerialMon.print( gpsFix.latitude() );
+    SerialMon.print(" Lon: ");
+    SerialMon.print( gpsFix.longitude() );
+    SerialMon.print(" Time: ");
+    SerialMon.printf("%d:%d:%d", gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds);
+    SerialMon.println();
 
     if(gpsFix.valid.location) {
       // SerialMon.println("Valid!");
@@ -233,17 +237,15 @@ void setup() {
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
   timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
-  timer.setInterval(1000L, checkGpsStatus);
+  timer.setInterval(1000L, updateGpsStatus);
 }
 
 void loop() {
     timer.run(); // Initiates BlynkTimer
     watchdogEnable(); // set up watchdog timer in interrupt-only mode
     if(gps.available()) {
-      if(gps.fix().valid.location) {
+      if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
         gpsFix = gps.read();
       }
     }
-
-
 }
