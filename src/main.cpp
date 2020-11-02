@@ -9,8 +9,12 @@
 #include <GPSport.h>
 // #include <Streamers.h>
 #include <SoftwareSerial.h>
+#include <TimeLib.h>
 
-
+int timerWriteSpatialTelemetryProxy;
+int timerUpdateTimeWithGps;
+int timerDisplayTime;
+int timerUpdateGpsStatusIndicators;
 
 
 // Check configuration
@@ -59,6 +63,23 @@ volatile int counter;      // Count number of times ISR is called.
 volatile int countmax = 8; // Arbitrarily selected 3 for this example.
                           // Timer expires after about 24 secs if
                           // 8 sec interval is selected below.
+
+// Offset hours from gps time (UTC)
+const int offset = 1;   // Central European Time
+//const int offset = -5;  // Eastern Standard Time (USA)
+//const int offset = -4;  // Eastern Daylight Time (USA)
+//const int offset = -8;  // Pacific Standard Time (USA)
+//const int offset = -7;  // Pacific Daylight Time (USA)
+
+// Ideally, it should be possible to learn the time zone
+// based on the GPS position data.  However, that would
+// require a complex library, probably incorporating some
+// sort of database using Eric Muller's time zone shape
+// maps, at http://efele.net/maps/tz/
+
+// Set EPOCH to 1970 in NeoGps 
+#define TIME_EPOCH_MODIFIABLE = true;
+// NeoTime::epoch_year(1970);
 
 
 void watchdogClear() {
@@ -135,62 +156,78 @@ bool modemRestart() {
     }
 }
 
-void writeSpatialTelemetryProxy(void* args) {
-
-  // Position* locPos = (Position*)args;
-
-  // SerialMon.print("Lat var: ");
-  // SerialMon.printf("%.6f\n", locPos->lat);
-
-  // SerialMon.print("Lng var: ");
-  // SerialMon.printf("%.6f\n\n", locPos->lng);
-
-  // SerialMon.print("Lat: ");
-  // SerialMon.printf("%.6f\n", gps.fix().latitude());
-
-  // SerialMon.print("Lng: ");
-  // SerialMon.printf("%.6f\n\n", gps.fix().longitude());
-
-  voltage = ds2782.readVoltage();
-  current = ds2782.readCurrent();
-
-
-  if(httpsClient.ConnectNetwork()) {
-    SerialMon.println("###################: ConnectNetwork succeeded");
-
-    if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
-      SerialMon.println("###################: POST succeeded");
-      // Clears the watchdog timer
-      watchdogClear();
-    } else {
-      SerialMon.println("###################: POST failed");
-    }
-
-    httpsClient.Disconnect();
-  } else {
-    SerialMon.println("###################: ConnectNetwork failed");
-    modemRestart();
-  }
-
+int getGpsTimestamp() {
+  NeoGPS::clock_t seconds = gpsFix.dateTime + offset * SECS_PER_HOUR;
+  return seconds;
 }
 
-void updateGpsStatus() {
+int getGpsAge() {
+  int16_t gpsFixAge = now() - getGpsTimestamp();
+  return gpsFixAge;
+}
 
-    SerialMon.print("Lat: ");
-    SerialMon.print( gpsFix.latitude() );
-    SerialMon.print(" Lon: ");
-    SerialMon.print( gpsFix.longitude() );
-    SerialMon.print(" Time: ");
-    SerialMon.printf("%d:%d:%d", gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds);
+bool isGpsFixFresh() {
+    bool isFresh = getGpsAge() <= 10;
+    return isFresh;
+}
+
+void updateGpsStatusIndicators() {
+    SerialMon.printf("Gps age: %d, is fresh: %s", getGpsAge(), isGpsFixFresh() ? "true" : "false");
     SerialMon.println();
 
-    if(gpsFix.valid.location) {
+    if(isGpsFixFresh()) {
       // SerialMon.println("Valid!");
       digitalWrite(PB4, HIGH);
     } else {
       // SerialMon.println("Invalid!");
       digitalWrite(PB4, LOW);
     }  
+}
+
+void updateTimeWithGps() {
+    
+    if(timeStatus() == timeNeedsSync || timeStatus() == timeNotSet || getGpsAge() < -1) {
+      SerialMon.printf("###################: Time status: %d, age: %d ", timeStatus(), getGpsAge());
+      SerialMon.println("###################: Updating Time");
+      setTime(gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds, gpsFix.dateTime.date, gpsFix.dateTime.month, gpsFix.dateTime.year);
+      adjustTime(offset * SECS_PER_HOUR);
+    }
+}
+
+void displayTime() {
+    SerialMon.print(" Date: ");
+    SerialMon.printf("%d/%d/%d", day(), month(), year());
+    SerialMon.print(" Time: ");
+    SerialMon.printf("%d:%d:%d", hour(), minute(), second());
+    SerialMon.printf(" Seconds since EPOCH: %ld", now());
+    SerialMon.printf(" Seconds since EPOCH (GPS): %ld", getGpsTimestamp());
+    SerialMon.println();
+}
+
+void writeSpatialTelemetryProxy(void* args) {
+
+  if(isGpsFixFresh()) {
+    voltage = ds2782.readVoltage();
+    current = ds2782.readCurrent();
+
+
+    if(httpsClient.ConnectNetwork()) {
+        SerialMon.println("###################: ConnectNetwork succeeded");
+
+        if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
+        SerialMon.println("###################: POST succeeded");
+        // Clears the watchdog timer
+        watchdogClear();
+        } else {
+        SerialMon.println("###################: POST failed");
+        }
+
+        httpsClient.Disconnect();
+    } else {
+        SerialMon.println("###################: ConnectNetwork failed");
+        modemRestart();
+    }
+  }
 }
 
 void setup() {
@@ -205,26 +242,15 @@ void setup() {
   MCUCR = (1<<JTD);
   MCUCR = (1<<JTD);
 
-  // initialize digital pin LED_BUILTIN as an output.
-  //pinMode(PB4, OUTPUT);
-  pinMode(20, OUTPUT);
   // enable Modem
+  pinMode(20, OUTPUT);
   digitalWrite(20, HIGH);
   delay(1000);
   digitalWrite(20, LOW);
-  delay(1000);  
-
-  // pinMode(21, OUTPUT);
-  // // enable GPS
-  // digitalWrite(21, HIGH);
-  // delay(1000);
-  // // digitalWrite(20, LOW);
-  // // delay(1000);  
-
+  delay(1000);
 
   // PB4 LED
   pinMode(PB4, OUTPUT);
-
 
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
@@ -236,12 +262,18 @@ void setup() {
 
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
-  timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
-  timer.setInterval(1000L, updateGpsStatus);
+
+  timerUpdateTimeWithGps = timer.setInterval(1000L, updateTimeWithGps);
+  timerDisplayTime = timer.setInterval(1000L, displayTime);
+  
+  timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
+  timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
+
+  timerWriteSpatialTelemetryProxy = timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
 }
 
 void loop() {
-    timer.run(); // Initiates BlynkTimer
+    timer.run(); // Initiates Timer
     watchdogEnable(); // set up watchdog timer in interrupt-only mode
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
