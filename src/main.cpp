@@ -11,6 +11,11 @@
 #include <SoftwareSerial.h>
 #include <TimeLib.h>
 
+#include <Accelerometer.h>
+Accelerometer accel;
+volatile bool isMoving;
+
+
 int timerWriteSpatialTelemetryProxy;
 int timerUpdateTimeWithGps;
 int timerDisplayTime;
@@ -139,6 +144,16 @@ ISR(WDT_vect) // watchdog timer interrupt service routine
  }
 }
 
+void ISR_isMoving() {
+  isMoving = digitalRead(2);
+  
+  if(!isMoving) {
+    accel.didMove = true;
+    // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
+  }
+
+};
+
 
 static void GPSisr( uint8_t c )
 {
@@ -171,11 +186,17 @@ bool isGpsFixFresh() {
     return isFresh;
 }
 
-void updateGpsStatusIndicators() {
-    SerialMon.printf("Gps age: %d, is fresh: %s", getGpsAge(), isGpsFixFresh() ? "true" : "false");
+bool isFixFreshAndMoving() {
+  bool didMove = accel.getDidMove();
+  return isGpsFixFresh() && didMove;
+}
+
+void updateGpsStatusIndicators(bool isFixFreshAndMoving) {
+
+    SerialMon.printf("Gps age: %d, is fresh: and did move: %s", getGpsAge(), isFixFreshAndMoving ? "true" : "false");
     SerialMon.println();
 
-    if(isGpsFixFresh()) {
+    if(isFixFreshAndMoving) {
       // SerialMon.println("Valid!");
       digitalWrite(PB4, HIGH);
     } else {
@@ -206,12 +227,15 @@ void displayTime() {
 
 void writeSpatialTelemetryProxy(void* args) {
 
-  if(isGpsFixFresh()) {
+  bool _isFixFreshAndMoving = isFixFreshAndMoving();
+
+  updateGpsStatusIndicators(_isFixFreshAndMoving);
+
+  if(_isFixFreshAndMoving) {
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
 
-
-    if(httpsClient.ConnectNetwork()) {
+    if(!httpsClient.IsConnected() && httpsClient.ConnectNetwork()) {
         SerialMon.println("###################: ConnectNetwork succeeded");
 
         if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
@@ -222,7 +246,7 @@ void writeSpatialTelemetryProxy(void* args) {
         SerialMon.println("###################: POST failed");
         }
 
-        httpsClient.Disconnect();
+        // httpsClient.Disconnect();
     } else {
         SerialMon.println("###################: ConnectNetwork failed");
         modemRestart();
@@ -242,6 +266,9 @@ void setup() {
   MCUCR = (1<<JTD);
   MCUCR = (1<<JTD);
 
+  Wire.begin();
+
+
   // enable Modem
   pinMode(20, OUTPUT);
   digitalWrite(20, HIGH);
@@ -251,6 +278,12 @@ void setup() {
 
   // PB4 LED
   pinMode(PB4, OUTPUT);
+  // Accelerometer Interrupt
+  pinMode(2, INPUT);
+
+  accel.begin();
+  attachInterrupt(2, ISR_isMoving, CHANGE);
+  // timer.setInterval(5000L, retrieveDidMoveProxy);
 
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
@@ -266,10 +299,10 @@ void setup() {
   timerUpdateTimeWithGps = timer.setInterval(1000L, updateTimeWithGps);
   timerDisplayTime = timer.setInterval(1000L, displayTime);
   
-  timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
-  timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
+  // timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
+  // timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
 
-  timerWriteSpatialTelemetryProxy = timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
+  timerWriteSpatialTelemetryProxy = timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
 }
 
 void loop() {
