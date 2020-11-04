@@ -206,9 +206,10 @@ void updateGpsStatusIndicators(bool isFixFreshAndMoving) {
 }
 
 void updateTimeWithGps() {
-    
+    SerialMon.printf("###################: Time status: %d, gps fix age: %d ", timeStatus(), getGpsAge());
+    SerialMon.println();
     if(timeStatus() == timeNeedsSync || timeStatus() == timeNotSet || getGpsAge() < -1) {
-      SerialMon.printf("###################: Time status: %d, age: %d ", timeStatus(), getGpsAge());
+      
       SerialMon.println("###################: Updating Time");
       setTime(gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds, gpsFix.dateTime.date, gpsFix.dateTime.month, gpsFix.dateTime.year);
       adjustTime(offset * SECS_PER_HOUR);
