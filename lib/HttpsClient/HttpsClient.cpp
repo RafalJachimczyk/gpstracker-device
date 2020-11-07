@@ -18,7 +18,7 @@ bool HttpsClient::modemRestart() {
 }
 
 bool HttpsClient::IsConnected() {
-  return _modem->isNetworkConnected();
+  return _modem->isGprsConnected();
 }
 
 bool HttpsClient::ConnectNetwork() {

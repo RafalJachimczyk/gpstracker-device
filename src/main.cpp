@@ -33,6 +33,7 @@ int timerUpdateGpsStatusIndicators;
 
 static NMEAGPS  gps;
 gps_fix gpsFix;
+bool gpsTimeInitialised = false;
 
 SimpleTimer timer;
 
@@ -144,17 +145,6 @@ ISR(WDT_vect) // watchdog timer interrupt service routine
  }
 }
 
-void ISR_isMoving() {
-  isMoving = digitalRead(2);
-  
-  if(!isMoving) {
-    accel.didMove = true;
-    // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
-  }
-
-};
-
-
 static void GPSisr( uint8_t c )
 {
   gps.handle( c );
@@ -181,39 +171,28 @@ int getGpsAge() {
   return gpsFixAge;
 }
 
-bool isGpsFixFresh() {
-    bool isFresh = getGpsAge() <= 10;
-    return isFresh;
+bool isGpsFixFresh(int ageThreshold = 10) {
+    bool isFresh = getGpsAge() <= ageThreshold;
+    return isFresh && gpsTimeInitialised;
 }
 
-bool isFixFreshAndMoving() {
+bool didMove() {
   bool didMove = accel.getDidMove();
-  return isGpsFixFresh() && didMove;
+  return didMove;
 }
 
-void updateGpsStatusIndicators(bool isFixFreshAndMoving) {
+void updateGpsStatusIndicators(bool didMove, bool isGpsFixFresh) {
 
-    SerialMon.printf("Gps age: %d, is fresh: and did move: %s", getGpsAge(), isFixFreshAndMoving ? "true" : "false");
-    SerialMon.println();
+    // SerialMon.printf("Gps age: %d, is gps fix fresh: %s and did move: %s", getGpsAge(), isGpsFixFresh ? "true" : "false", didMove ? "true" : "false");
+    // SerialMon.println();
 
-    if(isFixFreshAndMoving) {
+    if(isGpsFixFresh && didMove) {
       // SerialMon.println("Valid!");
       digitalWrite(PB4, HIGH);
     } else {
       // SerialMon.println("Invalid!");
       digitalWrite(PB4, LOW);
     }  
-}
-
-void updateTimeWithGps() {
-    SerialMon.printf("###################: Time status: %d, gps fix age: %d ", timeStatus(), getGpsAge());
-    SerialMon.println();
-    if(timeStatus() == timeNeedsSync || timeStatus() == timeNotSet || getGpsAge() < -1) {
-      
-      SerialMon.println("###################: Updating Time");
-      setTime(gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds, gpsFix.dateTime.date, gpsFix.dateTime.month, gpsFix.dateTime.year);
-      adjustTime(offset * SECS_PER_HOUR);
-    }
 }
 
 void displayTime() {
@@ -226,34 +205,101 @@ void displayTime() {
     SerialMon.println();
 }
 
-void writeSpatialTelemetryProxy(void* args) {
+void updateTimeWithGps() {
+    // displayTime();
+    // SerialMon.printf("###################: Time status: %d, gps fix age: %d ", timeStatus(), getGpsAge());
+    // SerialMon.println();
+    if(gpsTimeInitialised) {
+      if(timeStatus() == timeNeedsSync || timeStatus() == timeNotSet || getGpsAge() < -1) {
+        
+        SerialMon.println("###################: Updating Time");
+        setTime(gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds, gpsFix.dateTime.date, gpsFix.dateTime.month, gpsFix.dateTime.year);
+        adjustTime(offset * SECS_PER_HOUR);
+      }
+    }
+}
 
-  bool _isFixFreshAndMoving = isFixFreshAndMoving();
+void writeSpatialTelemetryProxy() {
 
-  updateGpsStatusIndicators(_isFixFreshAndMoving);
-
-  if(_isFixFreshAndMoving) {
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
 
-    if(!httpsClient.IsConnected() && httpsClient.ConnectNetwork()) {
-        SerialMon.println("###################: ConnectNetwork succeeded");
-
-        if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
-        SerialMon.println("###################: POST succeeded");
-        // Clears the watchdog timer
-        watchdogClear();
-        } else {
-        SerialMon.println("###################: POST failed");
-        }
-
-        // httpsClient.Disconnect();
+    if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
+    SerialMon.println("###################: POST succeeded");
+    // Clears the watchdog timer
+    watchdogClear();
     } else {
-        SerialMon.println("###################: ConnectNetwork failed");
-        modemRestart();
+    SerialMon.println("###################: POST failed");
     }
+
+}
+
+bool shouldUpdate(bool didMove) {
+  if(didMove) {
+    return true;
+  }
+  return false;
+}
+
+bool shouldConnect() {
+  return true;
+  if(httpsClient.IsConnected()) {
+    return false;
+  }
+  return true;
+}
+
+void connectNetwork() {
+  if(httpsClient.ConnectNetwork()) {
+    SerialMon.println("###################: ConnectNetwork succeeded");
+  } else {
+    SerialMon.println("###################: ConnectNetwork failed");
   }
 }
+
+bool shouldDisconnect() {
+  return false;
+}
+
+void disconnectNetwork() {
+  httpsClient.Disconnect();
+}
+
+void doWork() {
+
+  bool _didMove = didMove();
+
+  updateGpsStatusIndicators(_didMove, isGpsFixFresh(30));
+
+  if(isGpsFixFresh()) {
+
+    if(shouldUpdate(_didMove)) {
+
+      if(shouldConnect()) {
+        connectNetwork();
+      }
+
+      writeSpatialTelemetryProxy();
+
+    }
+
+  }
+
+  if(shouldDisconnect()) {
+    disconnectNetwork();
+  }
+}
+
+void ISR_isMoving() {
+  isMoving = digitalRead(2);
+  
+  if(!isMoving) {
+    accel.didMove = true;
+    updateGpsStatusIndicators(true, isGpsFixFresh(30));
+    // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
+  }
+
+};
 
 void setup() {
 
@@ -298,12 +344,12 @@ void setup() {
   modemRestart();
 
   timerUpdateTimeWithGps = timer.setInterval(1000L, updateTimeWithGps);
-  timerDisplayTime = timer.setInterval(1000L, displayTime);
+  // timerDisplayTime = timer.setInterval(1000L, displayTime);
   
   // timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
   // timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
 
-  timerWriteSpatialTelemetryProxy = timer.setInterval(10000L, writeSpatialTelemetryProxy, (void *)&position);
+  timerWriteSpatialTelemetryProxy = timer.setInterval(10000L, doWork);
 }
 
 void loop() {
@@ -311,6 +357,7 @@ void loop() {
     watchdogEnable(); // set up watchdog timer in interrupt-only mode
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
+        gpsTimeInitialised = true;
         gpsFix = gps.read();
       }
     }

@@ -4,6 +4,7 @@
         "PLATFORMIO_CALLER": "vscode"
     },
     "files.associations": {
-        "spatialtelemetry.pb.h": "c"
+        "spatialtelemetry.pb.h": "c",
+        "*.tpp": "cpp"
     }
 }
