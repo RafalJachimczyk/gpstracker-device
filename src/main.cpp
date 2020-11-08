@@ -4,7 +4,6 @@
 #include <Maxim_DS2782.h>
 
 #define NMEAGPS_INTERRUPT_PROCESSING
-
 #include <NMEAGPS.h>
 #include <GPSport.h>
 // #include <Streamers.h>
@@ -36,6 +35,7 @@ gps_fix gpsFix;
 bool gpsTimeInitialised = false;
 
 SimpleTimer timer;
+int timerCount;
 
 static const uint8_t i2c_address = 0x34;
 static const float rsns_ohm = 0.1;
@@ -235,7 +235,8 @@ void writeSpatialTelemetryProxy() {
 }
 
 bool shouldUpdate(bool didMove) {
-  if(didMove) {
+  if(didMove && timerCount >= 6) { // update every minute
+    timerCount = 0; //reset timer
     return true;
   }
   return false;
@@ -258,36 +259,11 @@ void connectNetwork() {
 }
 
 bool shouldDisconnect() {
-  return false;
+  return true;
 }
 
 void disconnectNetwork() {
   httpsClient.Disconnect();
-}
-
-void doWork() {
-
-  bool _didMove = didMove();
-
-  updateGpsStatusIndicators(_didMove, isGpsFixFresh(30));
-
-  if(isGpsFixFresh()) {
-
-    if(shouldUpdate(_didMove)) {
-
-      if(shouldConnect()) {
-        connectNetwork();
-      }
-
-      writeSpatialTelemetryProxy();
-
-    }
-
-  }
-
-  if(shouldDisconnect()) {
-    disconnectNetwork();
-  }
 }
 
 void ISR_isMoving() {
@@ -300,6 +276,32 @@ void ISR_isMoving() {
   }
 
 };
+
+void doWork() {
+
+  timerCount++;
+  SerialMon.printf("Timer: %d\n", timerCount);
+  bool _didMove = didMove();
+
+  updateGpsStatusIndicators(_didMove, isGpsFixFresh(30));
+
+  if(isGpsFixFresh()) {
+
+    if(shouldUpdate(_didMove)) {
+      detachInterrupt(2); //disabling interrupt as it interferes with software serial :-(
+      if(shouldConnect()) {
+        connectNetwork();
+      }
+      writeSpatialTelemetryProxy();
+      attachInterrupt(2, ISR_isMoving, CHANGE);
+    }
+
+  }
+
+  if(shouldDisconnect()) {
+    disconnectNetwork();
+  }
+}
 
 void setup() {
 
@@ -337,7 +339,7 @@ void setup() {
   gpsPort.begin(9600);
    
   // Initialize serial and wait for port to open:
-  SerialMon.begin(9600);
+  SerialMon.begin(19200);
   SerialAT.begin(2400);
 
   SerialMon.println("###################: Atmega644 started!");
