@@ -9,11 +9,8 @@
 #include <GPSport.h>
 // #include <Streamers.h>
 #include <SoftwareSerial.h>
-#include <TimeLib.h>
 
 int timerWriteSpatialTelemetryProxy;
-int timerUpdateTimeWithGps;
-int timerDisplayTime;
 int timerUpdateGpsStatusIndicators;
 
 
@@ -48,8 +45,6 @@ const int  port = 443;
 
 HttpsClient httpsClient(&server, port, &SerialMon, &SerialAT);
 
-int timerId;
-
 unsigned int raw = 0;
 
 float lat = 0;
@@ -63,24 +58,6 @@ volatile int counter;      // Count number of times ISR is called.
 volatile int countmax = 8; // Arbitrarily selected 3 for this example.
                           // Timer expires after about 24 secs if
                           // 8 sec interval is selected below.
-
-// Offset hours from gps time (UTC)
-const int offset = 1;   // Central European Time
-//const int offset = -5;  // Eastern Standard Time (USA)
-//const int offset = -4;  // Eastern Daylight Time (USA)
-//const int offset = -8;  // Pacific Standard Time (USA)
-//const int offset = -7;  // Pacific Daylight Time (USA)
-
-// Ideally, it should be possible to learn the time zone
-// based on the GPS position data.  However, that would
-// require a complex library, probably incorporating some
-// sort of database using Eric Muller's time zone shape
-// maps, at http://efele.net/maps/tz/
-
-// Set EPOCH to 1970 in NeoGps 
-#define TIME_EPOCH_MODIFIABLE = true;
-// NeoTime::epoch_year(1970);
-
 
 void watchdogClear() {
   counter = 0;
@@ -156,26 +133,15 @@ bool modemRestart() {
     }
 }
 
-int getGpsTimestamp() {
-  NeoGPS::clock_t seconds = gpsFix.dateTime + offset * SECS_PER_HOUR;
-  return seconds;
-}
-
-int getGpsAge() {
-  int16_t gpsFixAge = now() - getGpsTimestamp();
-  return gpsFixAge;
-}
-
-bool isGpsFixFresh() {
-    bool isFresh = getGpsAge() <= 10;
-    return isFresh;
+bool isGpsFixValid() {
+    return gpsFix.valid.location;
 }
 
 void updateGpsStatusIndicators() {
-    SerialMon.printf("Gps age: %d, is fresh: %s", getGpsAge(), isGpsFixFresh() ? "true" : "false");
+    SerialMon.printf("Is GPS fix valid: %s", isGpsFixValid() ? "true" : "false");
     SerialMon.println();
 
-    if(isGpsFixFresh()) {
+    if(isGpsFixValid()) {
       // SerialMon.println("Valid!");
       digitalWrite(PB4, HIGH);
     } else {
@@ -184,29 +150,9 @@ void updateGpsStatusIndicators() {
     }  
 }
 
-void updateTimeWithGps() {
-    
-    if(timeStatus() == timeNeedsSync || timeStatus() == timeNotSet || getGpsAge() < -1) {
-      SerialMon.printf("###################: Time status: %d, age: %d ", timeStatus(), getGpsAge());
-      SerialMon.println("###################: Updating Time");
-      setTime(gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds, gpsFix.dateTime.date, gpsFix.dateTime.month, gpsFix.dateTime.year);
-      adjustTime(offset * SECS_PER_HOUR);
-    }
-}
-
-void displayTime() {
-    SerialMon.print(" Date: ");
-    SerialMon.printf("%d/%d/%d", day(), month(), year());
-    SerialMon.print(" Time: ");
-    SerialMon.printf("%d:%d:%d", hour(), minute(), second());
-    SerialMon.printf(" Seconds since EPOCH: %ld", now());
-    SerialMon.printf(" Seconds since EPOCH (GPS): %ld", getGpsTimestamp());
-    SerialMon.println();
-}
-
 void writeSpatialTelemetryProxy(void* args) {
 
-  if(isGpsFixFresh()) {
+  if(isGpsFixValid()) {
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
 
@@ -262,9 +208,6 @@ void setup() {
 
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
-
-  timerUpdateTimeWithGps = timer.setInterval(1000L, updateTimeWithGps);
-  timerDisplayTime = timer.setInterval(1000L, displayTime);
   
   timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
   timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
