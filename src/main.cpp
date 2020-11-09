@@ -8,7 +8,6 @@
 #include <GPSport.h>
 // #include <Streamers.h>
 #include <SoftwareSerial.h>
-#include <TimeLib.h>
 
 #include <Accelerometer.h>
 Accelerometer accel;
@@ -16,8 +15,6 @@ volatile bool isMoving;
 
 
 int timerWriteSpatialTelemetryProxy;
-int timerUpdateTimeWithGps;
-int timerDisplayTime;
 int timerUpdateGpsStatusIndicators;
 
 
@@ -32,7 +29,6 @@ int timerUpdateGpsStatusIndicators;
 
 static NMEAGPS  gps;
 gps_fix gpsFix;
-bool gpsTimeInitialised = false;
 
 SimpleTimer timer;
 int timerCount;
@@ -54,8 +50,6 @@ const int  port = 443;
 
 HttpsClient httpsClient(&server, port, &SerialMon, &SerialAT);
 
-int timerId;
-
 unsigned int raw = 0;
 
 float lat = 0;
@@ -63,30 +57,10 @@ float lng = 0;
 float voltage = 0.0;
 float current = 0.0;
 
-Position position {0,0};
-
 volatile int counter;      // Count number of times ISR is called.
 volatile int countmax = 8; // Arbitrarily selected 3 for this example.
                           // Timer expires after about 24 secs if
                           // 8 sec interval is selected below.
-
-// Offset hours from gps time (UTC)
-const int offset = 1;   // Central European Time
-//const int offset = -5;  // Eastern Standard Time (USA)
-//const int offset = -4;  // Eastern Daylight Time (USA)
-//const int offset = -8;  // Pacific Standard Time (USA)
-//const int offset = -7;  // Pacific Daylight Time (USA)
-
-// Ideally, it should be possible to learn the time zone
-// based on the GPS position data.  However, that would
-// require a complex library, probably incorporating some
-// sort of database using Eric Muller's time zone shape
-// maps, at http://efele.net/maps/tz/
-
-// Set EPOCH to 1970 in NeoGps 
-#define TIME_EPOCH_MODIFIABLE = true;
-// NeoTime::epoch_year(1970);
-
 
 void watchdogClear() {
   counter = 0;
@@ -161,32 +135,20 @@ bool modemRestart() {
     }
 }
 
-int getGpsTimestamp() {
-  NeoGPS::clock_t seconds = gpsFix.dateTime + offset * SECS_PER_HOUR;
-  return seconds;
-}
-
-int getGpsAge() {
-  int16_t gpsFixAge = now() - getGpsTimestamp();
-  return gpsFixAge;
-}
-
-bool isGpsFixFresh(int ageThreshold = 10) {
-    bool isFresh = getGpsAge() <= ageThreshold;
-    return isFresh && gpsTimeInitialised;
-}
-
 bool didMove() {
   bool didMove = accel.getDidMove();
   return didMove;
 }
 
-void updateGpsStatusIndicators(bool didMove, bool isGpsFixFresh) {
+bool isGpsFixValid() {
+    return gpsFix.valid.location;
+}
 
-    // SerialMon.printf("Gps age: %d, is gps fix fresh: %s and did move: %s", getGpsAge(), isGpsFixFresh ? "true" : "false", didMove ? "true" : "false");
-    // SerialMon.println();
+void updateGpsStatusIndicators(bool didMove, bool isGpsFixValid) {
+    // SerialMon.printf("Is GPS fix valid: %s\n", isGpsFixValid ? "true" : "false");
+    // SerialMon.printf("Did move: %s\n", didMove ? "true" : "false");
 
-    if(isGpsFixFresh && didMove) {
+    if(isGpsFixValid && didMove) {
       // SerialMon.println("Valid!");
       digitalWrite(PB4, HIGH);
     } else {
@@ -195,41 +157,17 @@ void updateGpsStatusIndicators(bool didMove, bool isGpsFixFresh) {
     }  
 }
 
-void displayTime() {
-    SerialMon.print(" Date: ");
-    SerialMon.printf("%d/%d/%d", day(), month(), year());
-    SerialMon.print(" Time: ");
-    SerialMon.printf("%d:%d:%d", hour(), minute(), second());
-    SerialMon.printf(" Seconds since EPOCH: %ld", now());
-    SerialMon.printf(" Seconds since EPOCH (GPS): %ld", getGpsTimestamp());
-    SerialMon.println();
-}
-
-void updateTimeWithGps() {
-    // displayTime();
-    // SerialMon.printf("###################: Time status: %d, gps fix age: %d ", timeStatus(), getGpsAge());
-    // SerialMon.println();
-    if(gpsTimeInitialised) {
-      if(timeStatus() == timeNeedsSync || timeStatus() == timeNotSet || getGpsAge() < -1) {
-        
-        SerialMon.println("###################: Updating Time");
-        setTime(gpsFix.dateTime.hours, gpsFix.dateTime.minutes, gpsFix.dateTime.seconds, gpsFix.dateTime.date, gpsFix.dateTime.month, gpsFix.dateTime.year);
-        adjustTime(offset * SECS_PER_HOUR);
-      }
-    }
-}
-
 void writeSpatialTelemetryProxy() {
-
+  
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
 
     if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
-    SerialMon.println("###################: POST succeeded");
-    // Clears the watchdog timer
-    watchdogClear();
+      SerialMon.println("###################: POST succeeded");
+      // Clears the watchdog timer
+      watchdogClear();
     } else {
-    SerialMon.println("###################: POST failed");
+      SerialMon.println("###################: POST failed");
     }
 
 }
@@ -271,7 +209,7 @@ void ISR_isMoving() {
   
   if(!isMoving) {
     accel.didMove = true;
-    updateGpsStatusIndicators(true, isGpsFixFresh(30));
+    updateGpsStatusIndicators(true, isGpsFixValid());
     // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
   }
 
@@ -282,10 +220,11 @@ void doWork() {
   timerCount++;
   SerialMon.printf("Timer: %d\n", timerCount);
   bool _didMove = didMove();
+  bool _isGpsFixValid = isGpsFixValid();
 
-  updateGpsStatusIndicators(_didMove, isGpsFixFresh(30));
+  updateGpsStatusIndicators(_didMove, _isGpsFixValid);
 
-  if(isGpsFixFresh()) {
+  if(_isGpsFixValid) {
 
     if(shouldUpdate(_didMove)) {
       detachInterrupt(2); //disabling interrupt as it interferes with software serial :-(
@@ -344,9 +283,6 @@ void setup() {
 
   SerialMon.println("###################: Atmega644 started!");
   modemRestart();
-
-  timerUpdateTimeWithGps = timer.setInterval(1000L, updateTimeWithGps);
-  // timerDisplayTime = timer.setInterval(1000L, displayTime);
   
   // timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
   // timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
@@ -359,7 +295,6 @@ void loop() {
     watchdogEnable(); // set up watchdog timer in interrupt-only mode
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
-        gpsTimeInitialised = true;
         gpsFix = gps.read();
       }
     }
