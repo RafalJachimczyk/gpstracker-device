@@ -58,7 +58,7 @@ float voltage = 0.0;
 float current = 0.0;
 
 volatile int counter;      // Count number of times ISR is called.
-volatile int countmax = 8; // Arbitrarily selected 3 for this example.
+volatile int countmax = 10; // Arbitrarily selected 3 for this example.
                           // Timer expires after about 24 secs if
                           // 8 sec interval is selected below.
 
