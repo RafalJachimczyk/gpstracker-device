@@ -213,11 +213,13 @@ void setup() {
   timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
 
   timerWriteSpatialTelemetryProxy = timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
+
+  watchdogEnable(); // set up watchdog timer in interrupt-only mode
 }
 
 void loop() {
     timer.run(); // Initiates Timer
-    watchdogEnable(); // set up watchdog timer in interrupt-only mode
+    
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
         gpsFix = gps.read();
