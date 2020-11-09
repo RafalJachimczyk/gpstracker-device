@@ -201,7 +201,9 @@ bool shouldDisconnect() {
 }
 
 void disconnectNetwork() {
-  httpsClient.Disconnect();
+  if(httpsClient.IsConnected()) {
+    httpsClient.Disconnect();
+  }
 }
 
 void ISR_isMoving() {
@@ -286,13 +288,15 @@ void setup() {
   
   // timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
   // timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
-
   timerWriteSpatialTelemetryProxy = timer.setInterval(10000L, doWork);
+
+  watchdogEnable(); // set up watchdog timer in interrupt-only mode
+
 }
 
 void loop() {
     timer.run(); // Initiates Timer
-    watchdogEnable(); // set up watchdog timer in interrupt-only mode
+    
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
         gpsFix = gps.read();
