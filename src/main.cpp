@@ -291,7 +291,7 @@ void setup() {
   gpsPort.begin(9600);
    
   // Initialize serial and wait for port to open:
-  SerialMon.begin(19200);
+  SerialMon.begin(9600);
   SerialAT.begin(2400);
 
   SerialMon.println("###################: Atmega644 started!");
