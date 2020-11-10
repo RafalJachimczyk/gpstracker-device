@@ -117,12 +117,6 @@ ISR(WDT_vect) // watchdog timer interrupt service routine
  }
 }
 
-static void GPSisr( uint8_t c )
-{
-  gps.handle( c );
-
-} // GPSisr
-
 bool modemRestart() {
     if(httpsClient.modemRestart()) {
       SerialMon.println("###################: Modem restarted!");
@@ -207,17 +201,6 @@ void disconnectNetwork() {
   }
 }
 
-void ISR_isMoving() {
-  bool isMoving = digitalRead(2);
-  
-  if(!isMoving) {
-    accel.didMove = true;
-    updateGpsStatusIndicators(true, isGpsFixValid());
-    // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
-  }
-
-};
-
 void disableModem() {
   httpsClient.modemOff();
 }
@@ -230,6 +213,23 @@ void enableModem() {
   digitalWrite(20, LOW);
   delay(1000);
 }
+
+
+void ISR_isMoving() {
+  bool isMoving = digitalRead(2);
+  
+  if(!isMoving) {
+    accel.didMove = true;
+    updateGpsStatusIndicators(true, isGpsFixValid());
+    // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
+  }
+
+};
+
+static void GPSisr( uint8_t c )
+{
+  gps.handle( c );
+} // GPSisr
 
 void doWork() {
 
