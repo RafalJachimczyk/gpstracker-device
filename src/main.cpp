@@ -11,8 +11,6 @@
 
 #include <Accelerometer.h>
 Accelerometer accel;
-volatile bool isMoving;
-
 
 int timerWriteSpatialTelemetryProxy;
 int timerUpdateGpsStatusIndicators;
@@ -197,7 +195,10 @@ void connectNetwork() {
 }
 
 bool shouldDisconnect() {
-  return true;
+  if(httpsClient.IsConnected()) {
+    return true;
+  }
+  return false;
 }
 
 void disconnectNetwork() {
@@ -207,7 +208,7 @@ void disconnectNetwork() {
 }
 
 void ISR_isMoving() {
-  isMoving = digitalRead(2);
+  bool isMoving = digitalRead(2);
   
   if(!isMoving) {
     accel.didMove = true;
@@ -216,6 +217,19 @@ void ISR_isMoving() {
   }
 
 };
+
+void disableModem() {
+  httpsClient.modemOff();
+}
+
+void enableModem() {
+  // enable Modem
+  pinMode(20, OUTPUT);
+  digitalWrite(20, HIGH);
+  delay(1000);
+  digitalWrite(20, LOW);
+  delay(1000);
+}
 
 void doWork() {
 
@@ -226,22 +240,24 @@ void doWork() {
 
   updateGpsStatusIndicators(_didMove, _isGpsFixValid);
 
-  if(_isGpsFixValid) {
-
-    if(shouldUpdate(_didMove)) {
-      detachInterrupt(2); //disabling interrupt as it interferes with software serial :-(
-      if(shouldConnect()) {
-        connectNetwork();
-      }
-      writeSpatialTelemetryProxy();
-      attachInterrupt(2, ISR_isMoving, CHANGE);
+  if(shouldUpdate(_didMove) && _isGpsFixValid) {
+    detachInterrupt(2); //disabling interrupt as it interferes with software serial :-(
+    if(shouldConnect()) {
+      SerialMon.println("Will connect");
+      enableModem();
+      connectNetwork();
     }
+    writeSpatialTelemetryProxy();
+    attachInterrupt(2, ISR_isMoving, CHANGE);
+  } else {
+    watchdogClear(); // should it be here or outside this if statement ? 
+  }  
 
-  }
-
-  if(shouldDisconnect()) {
-    disconnectNetwork();
-  }
+  // if(shouldDisconnect()) {
+    SerialMon.println("Will disconnect");
+    // disconnectNetwork();
+    disableModem();
+  // }
 }
 
 void setup() {
@@ -260,11 +276,6 @@ void setup() {
 
 
   // enable Modem
-  pinMode(20, OUTPUT);
-  digitalWrite(20, HIGH);
-  delay(1000);
-  digitalWrite(20, LOW);
-  delay(1000);
 
   // PB4 LED
   pinMode(PB4, OUTPUT);
@@ -284,7 +295,7 @@ void setup() {
   SerialAT.begin(2400);
 
   SerialMon.println("###################: Atmega644 started!");
-  modemRestart();
+  // modemRestart();
   
   // timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
   // timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);

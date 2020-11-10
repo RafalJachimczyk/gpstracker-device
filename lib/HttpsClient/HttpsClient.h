@@ -97,6 +97,8 @@ class HttpsClient {
 
         bool modemRestart();
 
+        bool modemOff();
+
         HttpClient* http;
 };
 
