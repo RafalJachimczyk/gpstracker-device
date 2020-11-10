@@ -12,6 +12,9 @@ HttpsClient::HttpsClient(String* server, int port, HardwareSerial *SerialMon, So
   http = new HttpClient(*_client, *server, port); 
 }
 
+bool HttpsClient::modemOff() {
+  return _modem->poweroff();
+}
 
 bool HttpsClient::modemRestart() {
   return _modem->restart();

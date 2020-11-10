@@ -150,12 +150,25 @@ void updateGpsStatusIndicators() {
     }  
 }
 
+void modemOff() {
+  httpsClient.modemOff();
+}
+
+void modemOn() {
+  pinMode(20, OUTPUT);
+  digitalWrite(20, HIGH);
+  delay(1000);
+  digitalWrite(20, LOW);
+  delay(1000);
+}
+
 void writeSpatialTelemetryProxy(void* args) {
 
   if(isGpsFixValid()) {
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
 
+    modemOn();
 
     if(httpsClient.ConnectNetwork()) {
         SerialMon.println("###################: ConnectNetwork succeeded");
@@ -174,6 +187,9 @@ void writeSpatialTelemetryProxy(void* args) {
         modemRestart();
     }
   }
+
+  modemOff();
+
 }
 
 void setup() {
@@ -183,17 +199,9 @@ void setup() {
   MCUSR = 0x00; //cleared for next reset detection
   wdt_disable();
 
-
  //Disable JTAG
   MCUCR = (1<<JTD);
   MCUCR = (1<<JTD);
-
-  // enable Modem
-  pinMode(20, OUTPUT);
-  digitalWrite(20, HIGH);
-  delay(1000);
-  digitalWrite(20, LOW);
-  delay(1000);
 
   // PB4 LED
   pinMode(PB4, OUTPUT);
@@ -207,7 +215,6 @@ void setup() {
   SerialAT.begin(2400);
 
   SerialMon.println("###################: Atmega644 started!");
-  modemRestart();
   
   timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
   timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
