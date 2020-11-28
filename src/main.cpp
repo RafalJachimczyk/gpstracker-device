@@ -150,6 +150,11 @@ void updateGpsStatusIndicators() {
     }  
 }
 
+// This reduces current usage by about 20ma !  
+void enableGpsAlwaysLocateMode() {
+  gpsPort.write("$PMTK225,8*23");
+}
+
 void modemOff() {
   httpsClient.modemOff();
 }
@@ -209,6 +214,7 @@ void setup() {
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );
   gpsPort.begin(9600);
+  enableGpsAlwaysLocateMode();
    
   // Initialize serial and wait for port to open:
   SerialMon.begin(9600);
