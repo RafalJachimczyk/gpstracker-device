@@ -167,6 +167,16 @@ void modemOn() {
   delay(1000);
 }
 
+void sleep_atmega() {
+  // disable radios
+  modemOff();
+
+  // turn mcu off
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_enable();
+  sleep_cpu();
+}
+
 void writeSpatialTelemetryProxy(void* args) {
 
   if(isGpsFixValid()) {
@@ -193,7 +203,7 @@ void writeSpatialTelemetryProxy(void* args) {
     }
   }
 
-  modemOff();
+  sleep_atmega();
 
 }
 
@@ -227,7 +237,7 @@ void setup() {
 
   timerWriteSpatialTelemetryProxy = timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
 
-  watchdogEnable(); // set up watchdog timer in interrupt-only mode
+  //watchdogEnable(); // set up watchdog timer in interrupt-only mode
 }
 
 void loop() {
