@@ -20,6 +20,10 @@ bool HttpsClient::modemRestart() {
   return _modem->restart();
 }
 
+bool HttpsClient::IsConnected() {
+  return _modem->isNetworkConnected();
+}
+
 bool HttpsClient::ConnectNetwork() {
 
   // _SerialMon->println("Wait...");

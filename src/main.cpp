@@ -10,6 +10,11 @@
 // #include <Streamers.h>
 #include <SoftwareSerial.h>
 
+#include <Accelerometer.h>
+Accelerometer accel;
+volatile bool isMoving;
+
+
 int timerWriteSpatialTelemetryProxy;
 int timerUpdateGpsStatusIndicators;
 
@@ -116,6 +121,24 @@ ISR(WDT_vect) // watchdog timer interrupt service routine
  }
 }
 
+void ISR_isMoving() {
+  isMoving = digitalRead(2);
+  
+  if(!isMoving) {
+    accel.didMove = true;
+    // digitalWrite(PB4, accel.didMove); //Once device moved we set LED pin HIGH to indicate motion detected
+  }
+
+};
+
+void ISR_Wake() {
+    // cancel sleep as a precaution
+  sleep_disable();
+  SerialMon.println("###################: Atmega644 Wakey Wakey!");
+  // precautionary while we do other stuff
+  detachInterrupt (2);
+}
+
 
 static void GPSisr( uint8_t c )
 {
@@ -168,13 +191,33 @@ void modemOn() {
 }
 
 void sleep_atmega() {
+
+  SerialMon.println("###################: Atmega644 Sleeping");
   // disable radios
   modemOff();
 
   // turn mcu off
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   sleep_enable();
-  sleep_cpu();
+
+  // Do not interrupt before we go to sleep, or the
+  // ISR will detach interrupts and we won't wake.
+  noInterrupts ();
+  attachInterrupt(2, ISR_Wake, CHANGE);
+
+  EIFR = bit (INTF0);  // clear flag for interrupt 0
+ 
+  // turn off brown-out enable in software
+  // BODS must be set to one and BODSE must be set to zero within four clock cycles
+  MCUCR = bit (BODS) | bit (BODSE);
+  // The BODS bit is automatically cleared after three clock cycles
+  MCUCR = bit (BODS); 
+  
+  // We are guaranteed that the sleep_cpu call will be done
+  // as the processor executes the next instruction after
+  // interrupts are turned on.
+  interrupts ();  // one cycle
+  sleep_cpu ();   // one cycle
 }
 
 void writeSpatialTelemetryProxy(void* args) {
@@ -196,7 +239,7 @@ void writeSpatialTelemetryProxy(void* args) {
         SerialMon.println("###################: POST failed");
         }
 
-        httpsClient.Disconnect();
+        // httpsClient.Disconnect();
     } else {
         SerialMon.println("###################: ConnectNetwork failed");
         modemRestart();
@@ -218,8 +261,16 @@ void setup() {
   MCUCR = (1<<JTD);
   MCUCR = (1<<JTD);
 
+  Wire.begin();
+
   // PB4 LED
   pinMode(PB4, OUTPUT);
+  // Accelerometer Interrupt
+  pinMode(2, INPUT);
+
+  accel.begin();
+  //attachInterrupt(2, ISR_isMoving, CHANGE);
+  // timer.setInterval(5000L, retrieveDidMoveProxy);
 
   // GPS Port and interrupt setup
   gpsPort.attachInterrupt( GPSisr );

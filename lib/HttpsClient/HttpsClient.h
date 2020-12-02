@@ -87,6 +87,8 @@ class HttpsClient {
     public:
         HttpsClient(String* server, int port, HardwareSerial *SerialMon, SoftwareSerial *SerialAT);
 
+        bool IsConnected();
+
         bool ConnectNetwork();
 
         void Disconnect();
