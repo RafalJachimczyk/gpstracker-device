@@ -172,6 +172,7 @@ void writeSpatialTelemetryProxy(void* args) {
   if(isGpsFixValid()) {
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
+    // averageCurrent = ds2782.readAverageCurrent();
 
     modemOn();
 

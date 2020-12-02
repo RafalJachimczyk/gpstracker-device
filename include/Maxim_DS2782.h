@@ -335,6 +335,10 @@ public:
     return transferCurrent(read_int16a(Registers::Register_CURRENT, SerialMon), SerialMon);
   }
 
+  float readAverageCurrent() {
+    return transferCurrent(read_int16a(Registers::Register_IAVG, SerialMon), SerialMon);
+  }
+
   float readCurrentSenseResistorVoltage() {
     return read_int16(Registers::Register_CURRENT) * CURRENT_FACTOR;
   }
