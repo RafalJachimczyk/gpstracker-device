@@ -14,7 +14,7 @@
 #include <Accelerometer.h>
 Accelerometer accel;
 volatile bool isMoving;
-
+volatile bool isUpdating = false;
 
 int timerWriteSpatialTelemetryProxy;
 int timerUpdateGpsStatusIndicators;
@@ -218,11 +218,11 @@ void atmegaSleep() {
 
   //SerialMon.println("###################: Atmega644 Sleep");
   // disable radios
-  // modemOff();
+  modemOff();
   blueLedOff();
 
   attachInterrupt(2, ISR_Wake, LOW);
-
+  disablePower(POWER_ALL);
   sleepMode(SLEEP_POWER_DOWN);
   
   sleep(); // Go to sleep
@@ -231,8 +231,8 @@ void atmegaSleep() {
 }
 
 void writeSpatialTelemetryProxy() {
-
-  if(isGpsFixValid()) {
+  isUpdating = true;
+  // if(isGpsFixValid()) {
     voltage = ds2782.readVoltage();
     current = ds2782.readCurrent();
 
@@ -252,10 +252,10 @@ void writeSpatialTelemetryProxy() {
     }
         
     
-  }
+  // }
 
+  isUpdating = false;
   atmegaSleep();
-
 
 }
 
@@ -309,26 +309,28 @@ unsigned long previousMillisIndicate = 0; // last time update
 unsigned long previousMillisSleep = 0; // last time update
 long intervalIndicate = 1000; // interval at which to do something (milliseconds)
 
-long intervalSleep = 10000; // interval at which to do something (milliseconds)
+long intervalSleep = 40000; // interval at which to do something (milliseconds)
 
 
 void loop() {
     //timer.run(); // Initiates Timer
-    unsigned long currentMillisIndicate = millis();
-    unsigned long currentMillisSleep = millis();
 
-    if(currentMillisIndicate - previousMillisIndicate > intervalIndicate) {
-      previousMillisIndicate = currentMillisIndicate;
-      SerialMon.println(currentMillisIndicate);
-      sleepIndicator();
-    }    
+    if(!isUpdating) {
+      unsigned long currentMillisIndicate = millis();
+      unsigned long currentMillisSleep = millis();
+      if(currentMillisIndicate - previousMillisIndicate > intervalIndicate) {
+        previousMillisIndicate = currentMillisIndicate;
+        SerialMon.println(currentMillisIndicate);
+        sleepIndicator();
+      }    
 
-    if(currentMillisSleep - previousMillisSleep > intervalSleep) {
-      previousMillisSleep = currentMillisSleep;
-      SerialMon.println(currentMillisSleep);
-      atmegaSleep();
-    }    
-    
+      if(currentMillisSleep - previousMillisSleep > intervalSleep) {
+        isUpdating = true;
+        previousMillisSleep = currentMillisSleep;
+        SerialMon.println(currentMillisSleep);
+        writeSpatialTelemetryProxy();
+      }    
+    }
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
         gpsFix = gps.read();
