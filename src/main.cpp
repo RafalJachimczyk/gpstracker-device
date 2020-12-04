@@ -1,5 +1,6 @@
 #include <SimpleTimer.h>
-#include <avr/wdt.h>
+// #include <avr/wdt.h>
+#include <avr/sleep.h>
 #include <Wire.h>
 #include <Maxim_DS2782.h>
 
@@ -131,13 +132,8 @@ void ISR_isMoving() {
 
 };
 
-void ISR_Wake() {
-    // cancel sleep as a precaution
-  sleep_disable();
-  SerialMon.println("###################: Atmega644 Wakey Wakey!");
-  // precautionary while we do other stuff
-  detachInterrupt (2);
-}
+
+
 
 
 static void GPSisr( uint8_t c )
@@ -160,18 +156,46 @@ bool isGpsFixValid() {
     return gpsFix.valid.location;
 }
 
+void blueLedOn() {
+  digitalWrite(PB4, HIGH);
+}
+
+void blueLedOff() {
+  digitalWrite(PB4, LOW);
+}
+
 void updateGpsStatusIndicators() {
     SerialMon.printf("Is GPS fix valid: %s", isGpsFixValid() ? "true" : "false");
     SerialMon.println();
 
     if(isGpsFixValid()) {
       // SerialMon.println("Valid!");
-      digitalWrite(PB4, HIGH);
+      blueLedOn();
     } else {
       // SerialMon.println("Invalid!");
-      digitalWrite(PB4, LOW);
+      blueLedOff();
     }  
 }
+
+void ISR_Wake() {
+  noSleep();
+  enablePower(POWER_ALL);
+  detachInterrupt(2);
+  blueLedOn();
+
+
+  
+  //SerialMon.println("###################: Atmega644 Wakey Wakey!");
+  //updateGpsStatusIndicators();
+
+  // precautionary while we do other stuff
+
+
+  // TODO: this should not be needed - the fucker does not go to sleep
+  // timer.enable(timerWriteSpatialTelemetryProxy);
+  // timer.enable(timerUpdateGpsStatusIndicators);
+}
+
 
 // This reduces current usage by about 20ma !  
 void enableGpsAlwaysLocateMode() {
@@ -190,37 +214,23 @@ void modemOn() {
   delay(1000);
 }
 
-void sleep_atmega() {
+void atmegaSleep() {
 
-  // SerialMon.println("###################: Atmega644 Sleeping");
+  //SerialMon.println("###################: Atmega644 Sleep");
   // disable radios
-  modemOff();
+  // modemOff();
+  blueLedOff();
 
-  // turn mcu off
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  sleep_enable();
+  attachInterrupt(2, ISR_Wake, LOW);
 
-  // Do not interrupt before we go to sleep, or the
-  // ISR will detach interrupts and we won't wake.
-  noInterrupts ();
-  attachInterrupt(2, ISR_Wake, CHANGE);
-
-  EIFR = bit (INTF2);  // clear flag for interrupt 0
- 
-  // turn off brown-out enable in software
-  // BODS must be set to one and BODSE must be set to zero within four clock cycles
-  MCUCR = bit (BODS) | bit (BODSE);
-  // The BODS bit is automatically cleared after three clock cycles
-  MCUCR = bit (BODS); 
+  sleepMode(SLEEP_POWER_DOWN);
   
-  // We are guaranteed that the sleep_cpu call will be done
-  // as the processor executes the next instruction after
-  // interrupts are turned on.
-  interrupts ();  // one cycle
-  sleep_cpu ();   // one cycle
+  sleep(); // Go to sleep
+
+
 }
 
-void writeSpatialTelemetryProxy(void* args) {
+void writeSpatialTelemetryProxy() {
 
   if(isGpsFixValid()) {
     voltage = ds2782.readVoltage();
@@ -228,26 +238,29 @@ void writeSpatialTelemetryProxy(void* args) {
 
     modemOn();
 
-    if(httpsClient.ConnectNetwork()) {
-        SerialMon.println("###################: ConnectNetwork succeeded");
+    httpsClient.ConnectNetwork();
 
-        if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
+    SerialMon.println("###################: ConnectNetwork succeeded");
+
+    if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
         SerialMon.println("###################: POST succeeded");
         // Clears the watchdog timer
         // watchdogClear();
-        } else {
-        SerialMon.println("###################: POST failed");
-        }
-
-        // httpsClient.Disconnect();
+        //disableUpdates();
     } else {
-        SerialMon.println("###################: ConnectNetwork failed");
-        modemRestart();
+        SerialMon.println("###################: POST failed");
     }
+        
+    
   }
 
-  sleep_atmega();
+  atmegaSleep();
 
+
+}
+
+void sleepIndicator() {
+  SerialMon.println("Not sleeping");
 }
 
 void setup() {
@@ -282,17 +295,39 @@ void setup() {
   SerialAT.begin(2400);
 
   SerialMon.println("###################: Atmega644 started!");
-  
-  timerUpdateGpsStatusIndicators = timer.setTimeout(1500L, updateGpsStatusIndicators);
-  timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
+  blueLedOn();
+  //updateGpsStatusIndicators();
+  //timerUpdateGpsStatusIndicators = timer.setInterval(30000L, updateGpsStatusIndicators);
 
-  timerWriteSpatialTelemetryProxy = timer.setInterval(60000L, writeSpatialTelemetryProxy, (void *)&position);
+  // timer.setInterval(1000L, sleepIndicator);
+  // timerWriteSpatialTelemetryProxy = timer.setInterval(10000L, writeSpatialTelemetryProxy);
 
   //watchdogEnable(); // set up watchdog timer in interrupt-only mode
 }
 
+unsigned long previousMillisIndicate = 0; // last time update
+unsigned long previousMillisSleep = 0; // last time update
+long intervalIndicate = 1000; // interval at which to do something (milliseconds)
+
+long intervalSleep = 10000; // interval at which to do something (milliseconds)
+
+
 void loop() {
-    timer.run(); // Initiates Timer
+    //timer.run(); // Initiates Timer
+    unsigned long currentMillisIndicate = millis();
+    unsigned long currentMillisSleep = millis();
+
+    if(currentMillisIndicate - previousMillisIndicate > intervalIndicate) {
+      previousMillisIndicate = currentMillisIndicate;
+      SerialMon.println(currentMillisIndicate);
+      sleepIndicator();
+    }    
+
+    if(currentMillisSleep - previousMillisSleep > intervalSleep) {
+      previousMillisSleep = currentMillisSleep;
+      SerialMon.println(currentMillisSleep);
+      atmegaSleep();
+    }    
     
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
