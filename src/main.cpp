@@ -178,11 +178,13 @@ void updateGpsStatusIndicators() {
 }
 
 void ISR_Wake() {
+  noInterrupts();
   noSleep();
-  enablePower(POWER_ALL);
   detachInterrupt(2);
-  blueLedOn();
+  enablePower(POWER_ALL);
 
+  blueLedOn();
+  interrupts();
 
   
   //SerialMon.println("###################: Atmega644 Wakey Wakey!");
@@ -221,10 +223,11 @@ void atmegaSleep() {
   modemOff();
   blueLedOff();
 
-  attachInterrupt(2, ISR_Wake, LOW);
+  noInterrupts();
   disablePower(POWER_ALL);
   sleepMode(SLEEP_POWER_DOWN);
-  
+  attachInterrupt(2, ISR_Wake, LOW);
+  interrupts();
   sleep(); // Go to sleep
 
 
@@ -315,7 +318,7 @@ long intervalSleep = 40000; // interval at which to do something (milliseconds)
 void loop() {
     //timer.run(); // Initiates Timer
 
-    if(!isUpdating) {
+    // if(!isUpdating) {
       unsigned long currentMillisIndicate = millis();
       unsigned long currentMillisSleep = millis();
       if(currentMillisIndicate - previousMillisIndicate > intervalIndicate) {
@@ -330,7 +333,7 @@ void loop() {
         SerialMon.println(currentMillisSleep);
         writeSpatialTelemetryProxy();
       }    
-    }
+    // }
     if(gps.available()) {
       if(gps.fix().valid.location && gps.fix().valid.time && gps.fix().valid.date) {
         gpsFix = gps.read();
