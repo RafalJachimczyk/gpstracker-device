@@ -1,4 +1,4 @@
-#include <SimpleTimer.h>
+// #include <SimpleTimer.h>
 // #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <Wire.h>
@@ -32,7 +32,7 @@ int timerUpdateGpsStatusIndicators;
 static NMEAGPS  gps;
 gps_fix gpsFix;
 
-SimpleTimer timer;
+// SimpleTimer timer;
 
 static const uint8_t i2c_address = 0x34;
 static const float rsns_ohm = 0.1;
@@ -178,6 +178,13 @@ void updateGpsStatusIndicators() {
 }
 
 void ISR_Wake() {
+
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 200)
+  {
+      
   noInterrupts();
   noSleep();
   detachInterrupt(2);
@@ -185,6 +192,11 @@ void ISR_Wake() {
 
   blueLedOn();
   interrupts();
+      
+  }
+  last_interrupt_time = interrupt_time;
+
+
 
   
   //SerialMon.println("###################: Atmega644 Wakey Wakey!");
