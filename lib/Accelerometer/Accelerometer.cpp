@@ -71,7 +71,7 @@ void Accelerometer::begin() {
   Serial.printf("FF_MT_CFG: 0x%04x\n", readRegister(FF_MT_CFG));
 
 
-  //Set threshold of > 3g
+  //Set threshold of > 1.008g (1.008/0.063)
   Serial.printf("FF_MT_THS initial: 0x%04x\n", readRegister(FF_MT_THS));
   
   writeRegister(FF_MT_THS, 0x10);
