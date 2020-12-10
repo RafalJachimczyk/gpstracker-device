@@ -22,27 +22,14 @@ void Accelerometer::writeRegister(byte reg, byte data) {
   Wire.endTransmission();
 }
 
-
-// Behaves like latch storing didMove into local temporary boolean variable.
-// It resets the didMove variable instantly, and returns original value of
-// didMove. For demo purpose getDidMove is called to output value of didMove 
-// to a Serial Port and external Pin.
-// In reality this could be used to control battery saving logic in embedded applications.
-// An example would be to call getDidMove to make a decision if an internet connection 
-// should be made to upload telemetry
 bool Accelerometer::getDidMove() {
-  bool tempDidMove = didMove;
-  didMove = false;
-  return tempDidMove;
+  
+  byte status = readRegister(FF_MT_SRC);
+
+  // Serial.printf("INT_SOURCE: status: 0x%016x\n", status);
+  return ((status) & (1<<(7)));
 }
 
-// Makes use of latched didMove variable by calling getDidMove. 
-// Updates LED and prints to serial console the status of motion. 
-void Accelerometer::retrieveDidMove() {
-  bool tempDidMove = getDidMove();
-  digitalWrite(PB4, tempDidMove);
-  Serial.printf("%s\n", tempDidMove ? "Moved" : "Not moved");
-}
 
 void Accelerometer::begin() {
   byte whoAmI = readRegister(0x0D);
@@ -59,12 +46,13 @@ void Accelerometer::begin() {
   // Set configuration register for motion detection
   Serial.printf("FF_MT_CFG initial: 0x%04x\n", readRegister(FF_MT_CFG));
 
-  byte cfg = 0x00; //latch not enabled
+  byte cfg = 0x80; //latch enabled
   cfg |= 0x40;
   cfg |= 0x08;
   cfg |= 0x10;
   cfg |= 0x20;
 
+  // 11111000
 
   writeRegister(FF_MT_CFG, cfg);
 
