@@ -14,7 +14,6 @@
 #include <Accelerometer.h>
 Accelerometer accel;
 volatile bool isMoving;
-volatile bool isUpdating = false;
 
 int timerWriteSpatialTelemetryProxy;
 int timerUpdateGpsStatusIndicators;
@@ -177,41 +176,6 @@ void updateGpsStatusIndicators() {
     }  
 }
 
-void ISR_Wake() {
-  noInterrupts();
-  static unsigned long last_interrupt_time = 0;
-  unsigned long interrupt_time = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - last_interrupt_time > 1000)
-  {
-    noSleep();
-    detachInterrupt(2);
-    enablePower(POWER_ALL);
-    
-    watchdogEnable();
-
-    blueLedOn();
-  }
-  last_interrupt_time = interrupt_time;
-  interrupts();
-  
-  //SerialMon.println("###################: Atmega644 Wakey Wakey!");
-  //updateGpsStatusIndicators();
-
-  // precautionary while we do other stuff
-
-
-  // TODO: this should not be needed - the fucker does not go to sleep
-  // timer.enable(timerWriteSpatialTelemetryProxy);
-  // timer.enable(timerUpdateGpsStatusIndicators);
-}
-
-
-// This reduces current usage by about 20ma !  
-void enableGpsAlwaysLocateMode() {
-  gpsPort.write("$PMTK225,8*23");
-}
-
 void modemOff() {
   httpsClient.modemOff();
 }
@@ -223,6 +187,32 @@ void modemOn() {
   digitalWrite(20, LOW);
   delay(1000);
 }
+
+void ISR_Wake() {
+  noInterrupts();
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 1000)
+  {
+    noSleep();
+    detachInterrupt(2);
+    enablePower(POWER_ALL);
+    watchdogEnable();
+    accel.getDidMove(); // clear the registry
+    blueLedOn();
+  }
+  last_interrupt_time = interrupt_time;
+  interrupts();
+}
+
+
+// This reduces current usage by about 20ma !  
+void enableGpsAlwaysLocateMode() {
+  gpsPort.write("$PMTK225,8*23");
+}
+
+
 
 void atmegaSleep() {
 
@@ -242,39 +232,59 @@ void atmegaSleep() {
 
 }
 
+bool shouldSleep() {
+  bool didMove = accel.getDidMove();
+  bool shouldSleep = !didMove;
+
+
+  SerialMon.printf("didMove via FF_MT_SRC: %s\n", didMove ? "true" : "false");
+  SerialMon.printf("Should Sleep: %s\n", shouldSleep ? "true" : "false");
+
+  return shouldSleep;
+}
+
+
 void writeSpatialTelemetryProxy() {
-  isUpdating = true;
-  // if(isGpsFixValid()) {
-    voltage = ds2782.readVoltage();
-    current = ds2782.readAverageCurrent();
-    // averageCurrent = ds2782.readAverageCurrent();
-
-    modemOn();
-
-    httpsClient.ConnectNetwork();
-
-    SerialMon.println("###################: ConnectNetwork succeeded");
-
-    if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
-        SerialMon.println("###################: POST succeeded");
-        // Clears the watchdog timer
-        watchdogClear();
-        //disableUpdates();
-    } else {
-        SerialMon.println("###################: POST failed");
-    }
-        
-    
-  // }
-
-  isUpdating = false;
-  atmegaSleep();
+  
+  if(writeSpatialTelemetry(&httpsClient, &gpsFix, current, voltage, &SerialMon, &SerialAT)) {
+      SerialMon.println("###################: POST succeeded");
+      // Clears the watchdog timer
+      watchdogClear();
+      //disableUpdates();
+  } else {
+      SerialMon.println("###################: POST failed");
+  }
 
 }
 
+void updateTelemetry() {
+  if(isGpsFixValid()) {
+    voltage = ds2782.readVoltage();
+    current = ds2782.readAverageCurrent();
+
+    if(!httpsClient.IsConnected()) {
+      modemOn();
+      httpsClient.ConnectNetwork();
+      SerialMon.println("###################: ConnectNetwork succeeded");
+    }
+    
+    writeSpatialTelemetryProxy();
+
+  }
+  if(shouldSleep()) {
+    atmegaSleep();
+  }
+  
+
+}
+
+
+
 void sleepIndicator() {
-  SerialMon.println("Not sleeping");
-  SerialMon.printf("Accelerometer Interrupt pin state is : %s", digitalRead(2) ? "true" : "false");
+  //SerialMon.printf("FF_MT_SRC: status: 0x%016x\n", accel.getDidMove());
+  //SerialMon.printf("didMove via FF_MT_SRC: %s\n", accel.getDidMove() ? "true" : "false");
+
+  SerialMon.printf("Accelerometer Interrupt pin state is : %s\n", digitalRead(2) ? "true" : "false");
 }
 
 void setup() {
@@ -321,9 +331,9 @@ void setup() {
 
 unsigned long previousMillisIndicate = 0; // last time update
 unsigned long previousMillisSleep = 0; // last time update
-long intervalIndicate = 1000; // interval at which to do something (milliseconds)
+long intervalIndicate = 5000; // interval at which to do something (milliseconds)
 
-long intervalSleep = 40000; // interval at which to do something (milliseconds)
+long intervalUpdate = 23000; // interval at which to do something (milliseconds)
 
 
 void loop() {
@@ -338,11 +348,10 @@ void loop() {
         sleepIndicator();
       }    
 
-      if(currentMillisSleep - previousMillisSleep > intervalSleep) {
-        isUpdating = true;
+      if(currentMillisSleep - previousMillisSleep > intervalUpdate) {
         previousMillisSleep = currentMillisSleep;
         SerialMon.println(currentMillisSleep);
-        writeSpatialTelemetryProxy();
+        updateTelemetry();
       }    
     // }
     if(gps.available()) {
