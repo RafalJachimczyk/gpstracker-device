@@ -201,7 +201,7 @@ void ISR_Wake() {
   // precautionary while we do other stuff
 
 
-  // TODO: this should not be needed - the fucker does not go to sleep
+  // TODO: this should not be needed - the device does not go to sleep
   // timer.enable(timerWriteSpatialTelemetryProxy);
   // timer.enable(timerUpdateGpsStatusIndicators);
 }
