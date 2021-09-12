@@ -12,10 +12,10 @@ After a solid year of engineering this is what it looked like :
 
 ## GPS tracker requirements
 
-[ ] Small enough to fit on a dog collar
-[ ] Enough battery life to run for 2 days
-[ ] Three update modes
-    [ ] Continouos (update as fast as possible, when moving and app was used within last 5 minutes)
-    [ ] Every minute (standard when moving)
-    [ ] Every hour (when not moving)
+[] Small enough to fit on a dog collar
+[] Enough battery life to run for 2 days
+[] Three update modes
+    [] Continouos (update as fast as possible, when moving and app was used within last 5 minutes)
+    [] Every minute (standard when moving)
+    [] Every hour (when not moving)
 
