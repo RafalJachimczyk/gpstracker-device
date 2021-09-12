@@ -46,3 +46,29 @@ On the mobile side (iOS app), the code queries another GCP function (also go) us
 
 ![Test Pins](docs/images/Test-Pins.png)
 
+I will discuss each part of the schematics to explain design decisions I have made, and the constraints I was working with. 
+
+## Power Supply
+
+The GPS tracker is powered by a standard LiPo battery which operates between 3.2v to 4.2v. Any lower and the battery will be irreversably damaged, any higher - the battery might burst into flames. 
+
+The charging circuitry is built in into the device itself. For this I have chosen the trusted TP4056 iC, allowing for up to 1A charge current. Additionally we have battery protection IC - the FS312F.
+
+I also wanted to be able to tell the current usage. For this I have used the ds2782e+ fuel gauge iC. 
+
+The device operates on the 3.3V logic levels.
+I have used the TPS77801D low drop out voltage regulator (it somes with a handy status output on pin 8, to indicate low input voltage - we can use this to indicate low battery level and swithch off parts of system via MCU). The LDO delivers the power to all but one part of the system - the GSM module is powered directly from the battery, as it has massive peak current usage when communicating with GSM networks. Also the Sim800c operates exactly in the voltage range of the LiPo battery.
+
+
+### MCU
+
+As eplained at the very beginning of this document, I am not a professional electronics engineer so you will likely find huge design flaws in here :-) I have chosen Atmega 644P-20AU because it contains 2 hardware serial ports. Another reason for this was that the only previous experience I had was with Arduinio and ESP8266/32 boards. I know there are ARM mcus that would probably be much better for this job. 
+
+This was the biggest constraint initially for me. The GPS and GSM modules use serial interface to communicate with the MCU. I wanted to be able to see Serial Monitor output as well, to debug the device - that would be a third serial port! 
+
+The design decision I made was to use the two hardware ports of Atmega644 for GPS and Serial. The GSM would have to do with SoftwareSerial.
+
+
+# Software
+
+[] say something about lessons learned, Interrupts, RTOS
