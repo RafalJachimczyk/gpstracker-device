@@ -48,6 +48,24 @@ On the mobile side (iOS app), the code queries another GCP function (also go) us
 
 I will discuss each part of the schematics to explain design decisions I have made, and the constraints I was working with. 
 
+## PCB
+
+![Top Layer](docs/images/pcb-top.png)
+![Bottom Layer](docs/images/pcb-bottom.png)
+
+### Main component list
+
+| Subsystem | Component | Comments |
+|-----------|-----------------|------------------------|
+| MCU       | Atmega644P-20AU | 2 hardware serial ports|
+| Battery charger | TP4056 | |
+| Battery protection | FS312F | Protect from under/over charge|
+| Fuel gauge | DS2782E+ | Measure current |
+| LDO Voltage Regulator | TPS77801D | Regulates battery voltage to stable 3.3V |
+| GSM | SIM800C | Provides connectivity to the Internet |
+| GPS | Quectel L80-R | GPS receiver with patch antenna |
+
+
 ## Power Supply
 
 The GPS tracker is powered by a standard LiPo battery which operates between 3.2v to 4.2v. Any lower and the battery will be irreversably damaged, any higher - the battery might burst into flames. 
@@ -62,11 +80,19 @@ I have used the TPS77801D low drop out voltage regulator (it somes with a handy 
 
 ### MCU
 
-As eplained at the very beginning of this document, I am not a professional electronics engineer so you will likely find huge design flaws in here :-) I have chosen Atmega 644P-20AU because it contains 2 hardware serial ports. Another reason for this was that the only previous experience I had was with Arduinio and ESP8266/32 boards. I know there are ARM mcus that would probably be much better for this job. 
+I have chosen Atmega 644P-20AU because it contains 2 hardware serial ports (more on that below). Another reason for this was that the only previous experience with Microcontrollers I had was with the Arduinio and ESP8266/32 boards. I know there are ARM (and other) MCUs that would probably be much better for this job, but I wanted to use something I was already familiar with.
 
-This was the biggest constraint initially for me. The GPS and GSM modules use serial interface to communicate with the MCU. I wanted to be able to see Serial Monitor output as well, to debug the device - that would be a third serial port! 
+The number of hardware serial ports was the biggest constraint for me. The GPS and GSM modules use serial interface to communicate with the MCU. I wanted to be able to see Serial Monitor output as well, to debug the device - that would be a third serial port! 
 
 The design decision I made was to use the two hardware ports of Atmega644 for GPS and Serial. The GSM would have to do with SoftwareSerial.
+
+The MCU makes use of the 8MHz crystal. I have chosen this frequency to be able to operate in the 3.3V logic level. 16MHz requires higher voltages (5V) and I wanted to avoid having to convert logic levels of various sensors (which operate on 3.3V) to 5V. This would make the design much more complex. 
+
+# GSM/Internet connectivity
+
+For my first project of this scale I chose SIM800C. It is a very cheap (couple of dollars) chip providing GPRS Internet connectivity. Another rason why I selected it was that there was enough documentation and libraries to make me comfortable to work with it. 
+
+It is quite power hungry though, and peak requiring 2A of current. 
 
 
 # Software
